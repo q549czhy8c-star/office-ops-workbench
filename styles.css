@@ -491,6 +491,18 @@ button:disabled {
   border-radius: 3px;
 }
 
+.missing-cell {
+  color: var(--danger);
+  background: var(--danger-bg);
+  font-weight: 900;
+}
+
+.empty-state {
+  padding: 16px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
 .section-heading {
   display: flex;
   justify-content: space-between;
@@ -581,6 +593,53 @@ button:disabled {
 }
 
 .dashboard-table-input + .dashboard-table-input {
+  margin-top: 14px;
+}
+
+.filter-panel {
+  margin-top: 16px;
+  padding: 14px;
+  background: #fbfcfc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.filter-header h4 {
+  margin: 0;
+}
+
+.filter-list {
+  display: grid;
+  gap: 8px;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) 130px minmax(140px, 1fr) auto;
+  gap: 8px;
+}
+
+.filter-row select,
+.filter-row input {
+  min-height: 40px;
+  width: 100%;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.chart-field {
+  max-width: 280px;
   margin-top: 14px;
 }
 
@@ -751,6 +810,7 @@ tr:last-child td {
   .dashboard-controls,
   .metric-grid,
   .chart-layout,
+  .filter-row,
   .report-grid,
   .path-bar {
     grid-template-columns: 1fr;

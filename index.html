@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Office Ops Workbench</title>
-  <link rel="stylesheet" href="styles.css?v=1.1.0">
+  <link rel="stylesheet" href="styles.css?v=2.0.0">
 </head>
 <body>
   <div class="app-shell">
@@ -61,53 +61,46 @@
       <section class="tool-panel active" id="tool-dashboard" data-title="Dashboard">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Ad hoc Excel analysis</p>
-            <h3>Dashboard Analyzer</h3>
+            <p class="eyebrow">Daily and monthly report lookup</p>
+            <h3>Policy Dashboard</h3>
           </div>
-          <p>Paste one or two Excel tables, define the columns, then calculate core metrics and group distribution.</p>
+          <p>Paste Daily and Monthly report data. Policy number is used as the key to combine values, filter results, chart distribution and export CSV.</p>
         </div>
 
         <div class="dashboard-layout">
           <div class="dashboard-main">
-            <div class="control-grid three dashboard-controls">
-              <label class="field compact">
-                <span>Case column</span>
-                <input id="dashCaseCol" type="text" value="A">
-              </label>
-              <label class="field compact">
-                <span>Sum Assured column</span>
-                <input id="dashSumCol" type="text" value="B">
-              </label>
-              <label class="field compact">
-                <span>Group column</span>
-                <input id="dashGroupCol" type="text" placeholder="Optional">
-              </label>
-              <label class="field compact">
-                <span>Extra value columns</span>
-                <input id="dashExtraCols" type="text" placeholder="C,D,E">
-              </label>
-              <label class="field compact">
-                <span>Pie chart by</span>
-                <select id="dashChartBasis">
-                  <option value="count">Case count</option>
-                  <option value="sum">Sum Assured</option>
-                </select>
-              </label>
-            </div>
-
             <label class="field dashboard-table-input">
-              <span>Primary Excel data</span>
-              <small>Paste tab-delimited rows from Excel. Header row is optional.</small>
-              <textarea id="dashInput" placeholder="Paste Excel data here..."></textarea>
+              <span>Daily report data</span>
+              <small>Uses A Submission date, B Policy number, D Plan name, M Status, I Broker name, O Issue date.</small>
+              <textarea id="dashDailyInput" placeholder="Paste Daily Report Excel data here..."></textarea>
             </label>
             <label class="field dashboard-table-input">
-              <span>Secondary Excel data</span>
-              <small>Optional. Use this when values come from another report table with the same column setup.</small>
-              <textarea id="dashInputSecondary" placeholder="Paste another table here if needed..."></textarea>
+              <span>Monthly report data</span>
+              <small>Uses A Policy number, C Policy currency, D Sum Assured, F Payment mode, G Modal premium, I Risk Commencement date.</small>
+              <textarea id="dashMonthlyInput" placeholder="Paste Monthly Report Excel data here..."></textarea>
+            </label>
+
+            <div class="filter-panel">
+              <div class="filter-header">
+                <h4>Filters</h4>
+                <button class="ghost-button" id="addDashFilter" type="button">Add Filter</button>
+              </div>
+              <div class="filter-list" id="dashFilters"></div>
+            </div>
+
+            <label class="field compact chart-field">
+              <span>Pie chart by</span>
+              <select id="dashPieField">
+                <option value="status">Status</option>
+                <option value="brokerName">Broker name</option>
+                <option value="planName">Plan name</option>
+                <option value="currency">Policy currency</option>
+                <option value="paymentMode">Payment mode</option>
+              </select>
             </label>
 
             <div class="action-row">
-              <button class="primary-button" id="processDashboard" type="button">Analyze</button>
+              <button class="primary-button" id="processDashboard" type="button">Build Dashboard</button>
               <button class="secondary-button" id="copyDashboard" type="button" disabled>Copy Summary</button>
               <button class="secondary-button" id="exportDashboard" type="button" disabled>Export CSV</button>
               <span class="status-text" id="dashStatus" role="status"></span>
@@ -130,7 +123,7 @@
         <div class="metric-grid" id="dashMetrics">
           <article class="stat-card compact-stat">
             <span class="stat-value">0</span>
-            <span class="stat-label">No. of cases</span>
+            <span class="stat-label">Policies shown</span>
           </article>
           <article class="stat-card compact-stat">
             <span class="stat-value">0</span>
@@ -138,7 +131,7 @@
           </article>
           <article class="stat-card compact-stat">
             <span class="stat-value">0</span>
-            <span class="stat-label">Largest Sum Assured</span>
+            <span class="stat-label">Missing lookup / values</span>
           </article>
         </div>
 
@@ -146,7 +139,7 @@
         <div class="chart-panel" id="dashChartPanel">
           <div class="chart-header">
             <h4>Pie Chart</h4>
-            <span id="dashChartStatus">Analyze grouped data to show chart.</span>
+            <span id="dashChartStatus">Build dashboard to show chart.</span>
           </div>
           <div class="chart-layout">
             <canvas id="dashPieChart" width="280" height="280" aria-label="Dashboard pie chart"></canvas>
@@ -297,6 +290,6 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=1.1.0"></script>
+  <script src="app.js?v=2.0.0"></script>
 </body>
 </html>

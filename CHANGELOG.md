@@ -2,6 +2,17 @@
 
 All notable changes to Office Ops Workbench are recorded here. Version type is determined before each release using `scripts/version.mjs`.
 
+## [2.0.0] - 2026-05-27
+
+### Major
+
+- Changed Dashboard into a Daily report plus Monthly report policy lookup dashboard.
+- Added policy-number key matching between Daily and Monthly report data.
+- Added add/delete multi-filter rows for dashboard result filtering.
+- Added highlighted red cells for missing values and failed monthly lookups.
+- Changed Dashboard table and CSV export to policy-level joined records.
+- Updated pie chart to use filtered dashboard records.
+
 ## [1.1.0] - 2026-05-27
 
 ### Minor

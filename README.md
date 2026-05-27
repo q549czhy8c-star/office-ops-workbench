@@ -8,7 +8,7 @@ Open `index.html` directly in a browser. No server or install step is required.
 
 | Tool | Purpose | Output |
 | --- | --- | --- |
-| Dashboard Analyzer | Counts pasted Excel cases across one or two pasted tables, calculates total / largest Sum Assured, summarizes extra value columns, and charts group distribution. | On-screen summary, pie chart, copy text and CSV |
+| Policy Dashboard | Combines Daily and Monthly reports by policy number, supports multi-filter rows, highlights missing lookups or values, charts filtered distribution, and exports CSV. | Lookup table, pie chart and CSV |
 | Comment Converter | Replaces lines containing only `Reply` with underline separators. | Copy-ready text |
 | NiceActimize Report | Builds Part A daily summary and Part B policy ageing list from Ready / Investigation rows. Policy number is extracted with `MID(text,10,8)`. | Copy-ready report and CSV |
 | High Risk Client Extractor | Filters pasted AML policy data by issue date, risk level and Everest broker rules. Large results render a limited preview while CSV export keeps all rows. | Highlighted table preview and full CSV |
@@ -54,4 +54,4 @@ The helper script automatically classifies the requested update as major or mino
 
 ## Current Version
 
-`1.1.0`
+`2.0.0`

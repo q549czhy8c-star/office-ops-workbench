@@ -1,4 +1,4 @@
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "2.0.0";
 const HRC_DISPLAY_LIMIT = 500;
 
 const state = {
@@ -10,7 +10,10 @@ const state = {
 };
 
 const columns = {
-  dashboard: ["Metric", "Value"],
+  dashboard: [
+    "Submission Date", "Policy Number", "Plan Name", "Status", "Broker Name", "Issue Date",
+    "Policy Currency", "Sum Assured", "Payment Mode", "Modal Premium", "Risk Commencement Date", "Missing Fields"
+  ],
   edd: ["Policy Number", "Policyholder", "Nationality", "Broker", "High Risk Ind", "Risk Level", "Comment", "Reason", "In Table 3"],
   hrc: ["Policy No", "Issue Date", "Reason", "Comment", "Risk Level", "Broker", "Policyholder", "Nationality", "High Risk Ind"],
   actSummary: ["Date", "Ready Count", "Investigation Count"],
@@ -49,58 +52,48 @@ function showTool(tool) {
 }
 
 function bindDashboardTool() {
-  document.getElementById("processDashboard").addEventListener("click", () => {
-    const caseIndex = excelColToIndex(document.getElementById("dashCaseCol").value);
-    const sumIndex = excelColToIndex(document.getElementById("dashSumCol").value);
-    const groupValue = clean(document.getElementById("dashGroupCol").value);
-    const groupIndex = groupValue ? excelColToIndex(groupValue) : -1;
-    const extraIndexes = parseColumnList(document.getElementById("dashExtraCols").value);
-    const chartBasis = document.getElementById("dashChartBasis").value;
-    const datasets = [
-      { source: "Primary", rows: getDashboardRows("dashInput", [caseIndex, sumIndex, groupIndex, ...extraIndexes]) },
-      { source: "Secondary", rows: getDashboardRows("dashInputSecondary", [caseIndex, sumIndex, groupIndex, ...extraIndexes]) }
-    ].filter((dataset) => dataset.rows.length);
-    const rows = datasets.flatMap((dataset) => dataset.rows.map((row) => ({ source: dataset.source, row })));
+  renderDashboardFilters();
 
-    if (!rows.length) {
-      setStatus("dashStatus", "Paste Excel data first.");
+  document.getElementById("processDashboard").addEventListener("click", () => {
+    const dailyRows = getDashboardRows("dashDailyInput", [0, 1, 3, 8, 12, 14]);
+    const monthlyRows = getDashboardRows("dashMonthlyInput", [0, 2, 3, 5, 6, 8]);
+
+    if (!dailyRows.length) {
+      setStatus("dashStatus", "Paste Daily report data first.");
       return;
     }
 
-    const items = rows.map(({ source, row }) => ({
-      source,
-      caseNo: clean(row[caseIndex]),
-      sumAssured: parseAmount(row[sumIndex]),
-      group: groupIndex >= 0 ? clean(row[groupIndex]) : "",
-      extras: extraIndexes.map((index) => clean(row[index]))
-    })).filter((item) => item.caseNo || item.sumAssured > 0 || item.group);
-
-    const validSums = items.map((item) => item.sumAssured).filter((value) => Number.isFinite(value));
-    const caseCount = items.filter((item) => item.caseNo).length || items.length;
-    const uniqueCaseCount = new Set(items.map((item) => item.caseNo).filter(Boolean)).size;
-    const totalSum = validSums.reduce((sum, value) => sum + value, 0);
-    const largestSum = validSums.length ? Math.max(...validSums) : 0;
-    const largestCase = items.find((item) => item.sumAssured === largestSum)?.caseNo || "";
-    const groupSummary = groupIndex >= 0 ? summarizeByGroup(items) : [];
-    const sourceSummary = summarizeBySource(items);
-    const extraSummary = summarizeExtras(items, extraIndexes);
+    const monthlyMap = new Map(monthlyRows.map((row) => [clean(row[0]), extractMonthlyRow(row)]).filter(([policyNo]) => policyNo));
+    const joinedRows = dailyRows.map((row) => buildDashboardPolicyRow(row, monthlyMap));
+    const filters = getDashboardFilters();
+    const filteredRows = applyDashboardFilters(joinedRows, filters);
+    const totalSum = filteredRows.reduce((sum, row) => sum + (Number.isFinite(row.sumAssuredNumber) ? row.sumAssuredNumber : 0), 0);
+    const missingCount = filteredRows.filter((row) => row.missingFields.length).length;
 
     state.dashboard = {
-      caseCount,
-      uniqueCaseCount,
+      rows: filteredRows,
+      sourceCount: joinedRows.length,
+      filters,
+      shownCount: filteredRows.length,
       totalSum,
-      largestSum,
-      largestCase,
-      groupSummary,
-      sourceSummary,
-      extraSummary,
-      chartBasis
+      missingCount,
+      pieField: document.getElementById("dashPieField").value
     };
 
     renderDashboard();
     document.getElementById("copyDashboard").disabled = false;
     document.getElementById("exportDashboard").disabled = false;
-    setStatus("dashStatus", `${items.length} row(s) analyzed.`);
+    setStatus("dashStatus", `${filteredRows.length} of ${joinedRows.length} policy record(s) shown.`);
+  });
+
+  document.getElementById("addDashFilter").addEventListener("click", () => {
+    addDashboardFilter();
+  });
+
+  document.getElementById("dashFilters").addEventListener("click", (event) => {
+    const removeButton = event.target.closest("[data-remove-filter]");
+    if (!removeButton) return;
+    removeButton.closest(".filter-row").remove();
   });
 
   document.getElementById("copyDashboard").addEventListener("click", async () => {
@@ -122,53 +115,34 @@ function bindDashboardTool() {
 }
 
 function renderDashboard() {
-  const { caseCount, uniqueCaseCount, totalSum, largestSum, largestCase, groupSummary, sourceSummary, extraSummary, chartBasis } = state.dashboard;
+  const { rows, sourceCount, shownCount, totalSum, missingCount, pieField } = state.dashboard;
   document.getElementById("dashMetrics").innerHTML = `
     <article class="stat-card compact-stat">
-      <span class="stat-value">${formatInteger(caseCount)}</span>
-      <span class="stat-label">No. of cases</span>
+      <span class="stat-value">${formatInteger(shownCount)}</span>
+      <span class="stat-label">Policies shown</span>
     </article>
     <article class="stat-card compact-stat">
       <span class="stat-value">${formatAmount(totalSum)}</span>
       <span class="stat-label">Total Sum Assured</span>
     </article>
     <article class="stat-card compact-stat">
-      <span class="stat-value">${formatAmount(largestSum)}</span>
-      <span class="stat-label">Largest Sum Assured</span>
+      <span class="stat-value">${formatInteger(missingCount)}</span>
+      <span class="stat-label">Missing lookup / values</span>
     </article>
   `;
 
-  const rows = [
-    ["No. of cases", formatInteger(caseCount)],
-    ["Unique case no.", formatInteger(uniqueCaseCount)],
-    ["Total Sum Assured", formatAmount(totalSum)],
-    ["Largest Sum Assured", formatAmount(largestSum)],
-    ["Largest case", largestCase || "-"]
-  ];
-  if (sourceSummary.length > 1) {
-    rows.push(["", ""]);
-    rows.push(["Source", "Cases / Total Sum Assured"]);
-    sourceSummary.forEach((item) => rows.push([item.source, `${formatInteger(item.count)} / ${formatAmount(item.total)}`]));
+  renderDashboardTable(rows);
+  renderPieChart(summarizeDashboardPie(rows, pieField), pieField);
+  if (!rows.length && sourceCount) {
+    document.getElementById("dashResult").innerHTML = `<div class="empty-state">No rows matched the selected filters.</div>`;
   }
-  if (extraSummary.length) {
-    rows.push(["", ""]);
-    rows.push(["Extra column", "Distinct non-empty values"]);
-    extraSummary.forEach((item) => rows.push([item.column, formatInteger(item.distinctCount)]));
-  }
-  if (groupSummary.length) {
-    rows.push(["", ""]);
-    rows.push(["Group", "Cases / Total Sum Assured"]);
-    groupSummary.forEach((item) => rows.push([item.group || "(blank)", `${formatInteger(item.count)} / ${formatAmount(item.total)}`]));
-  }
-  renderTable("dashResult", columns.dashboard, rows);
-  renderPieChart(groupSummary, chartBasis);
 }
 
 function getDashboardSummary(separator) {
-  const rows = Array.from(document.querySelectorAll("#dashResult tbody tr")).map((tr) => (
-    Array.from(tr.children).map((td) => td.innerText)
-  ));
-  return [columns.dashboard.join(separator), ...rows.map((row) => row.join(separator))].join("\n");
+  return [
+    columns.dashboard.join(separator),
+    ...state.dashboard.rows.map((row) => dashboardRowToArray(row).join(separator))
+  ].join("\n");
 }
 
 function getDashboardRows(inputId, headerIndexes) {
@@ -177,18 +151,194 @@ function getDashboardRows(inputId, headerIndexes) {
   return detectHeaderRow(rows, headerIndexes.filter((index) => index >= 0)) ? rows.slice(1) : rows;
 }
 
-function renderPieChart(groupSummary, chartBasis) {
+function renderDashboardFilters() {
+  const container = document.getElementById("dashFilters");
+  container.innerHTML = "";
+  addDashboardFilter("status", "not-empty", "");
+}
+
+function addDashboardFilter(field = "status", operator = "contains", value = "") {
+  const container = document.getElementById("dashFilters");
+  const row = document.createElement("div");
+  row.className = "filter-row";
+  row.innerHTML = `
+    <select class="filter-field">
+      ${dashboardFilterFields().map((item) => `<option value="${item.key}">${item.label}</option>`).join("")}
+    </select>
+    <select class="filter-operator">
+      <option value="contains">Contains</option>
+      <option value="equals">Equals</option>
+      <option value="not-equals">Not equals</option>
+      <option value="empty">Missing / empty</option>
+      <option value="not-empty">Not empty</option>
+    </select>
+    <input class="filter-value" type="text" placeholder="Value">
+    <button class="ghost-button" data-remove-filter type="button">Delete</button>
+  `;
+  row.querySelector(".filter-field").value = field;
+  row.querySelector(".filter-operator").value = operator;
+  row.querySelector(".filter-value").value = value;
+  container.appendChild(row);
+}
+
+function dashboardFilterFields() {
+  return [
+    { key: "submissionDate", label: "Submission date" },
+    { key: "policyNo", label: "Policy number" },
+    { key: "planName", label: "Plan name" },
+    { key: "status", label: "Status" },
+    { key: "brokerName", label: "Broker name" },
+    { key: "issueDate", label: "Issue date" },
+    { key: "currency", label: "Policy currency" },
+    { key: "sumAssured", label: "Sum Assured" },
+    { key: "paymentMode", label: "Payment mode" },
+    { key: "modalPremium", label: "Modal premium" },
+    { key: "riskCommencementDate", label: "Risk Commencement date" },
+    { key: "missingFieldsText", label: "Missing fields" }
+  ];
+}
+
+function getDashboardFilters() {
+  return Array.from(document.querySelectorAll("#dashFilters .filter-row")).map((row) => ({
+    field: row.querySelector(".filter-field").value,
+    operator: row.querySelector(".filter-operator").value,
+    value: clean(row.querySelector(".filter-value").value)
+  })).filter((filter) => filter.operator === "empty" || filter.operator === "not-empty" || filter.value);
+}
+
+function applyDashboardFilters(rows, filters) {
+  if (!filters.length) return rows;
+  return rows.filter((row) => filters.every((filter) => matchesDashboardFilter(row, filter)));
+}
+
+function matchesDashboardFilter(row, filter) {
+  const rawValue = String(row[filter.field] ?? "");
+  const value = rawValue.toLowerCase();
+  const target = filter.value.toLowerCase();
+  if (filter.operator === "contains") return value.includes(target);
+  if (filter.operator === "equals") return value === target;
+  if (filter.operator === "not-equals") return value !== target;
+  if (filter.operator === "empty") return !clean(rawValue);
+  if (filter.operator === "not-empty") return !!clean(rawValue);
+  return true;
+}
+
+function extractMonthlyRow(row) {
+  return {
+    policyNo: clean(row[0]),
+    currency: clean(row[2]),
+    sumAssured: clean(row[3]),
+    sumAssuredNumber: parseAmount(row[3]),
+    paymentMode: clean(row[5]),
+    modalPremium: clean(row[6]),
+    riskCommencementDate: clean(row[8])
+  };
+}
+
+function buildDashboardPolicyRow(dailyRow, monthlyMap) {
+  const policyNo = clean(dailyRow[1]);
+  const monthly = monthlyMap.get(policyNo);
+  const row = {
+    submissionDate: clean(dailyRow[0]),
+    policyNo,
+    planName: clean(dailyRow[3]),
+    status: clean(dailyRow[12]),
+    brokerName: clean(dailyRow[8]),
+    issueDate: clean(dailyRow[14]),
+    currency: monthly?.currency || "",
+    sumAssured: monthly?.sumAssured || "",
+    sumAssuredNumber: monthly?.sumAssuredNumber ?? Number.NaN,
+    paymentMode: monthly?.paymentMode || "",
+    modalPremium: monthly?.modalPremium || "",
+    riskCommencementDate: monthly?.riskCommencementDate || "",
+    missingFields: []
+  };
+  const requiredFields = ["submissionDate", "policyNo", "planName", "status", "brokerName", "issueDate"];
+  requiredFields.forEach((field) => {
+    if (!row[field]) row.missingFields.push(field);
+  });
+  if (!monthly) {
+    row.missingFields.push("monthly lookup");
+  } else {
+    ["currency", "sumAssured", "paymentMode", "modalPremium", "riskCommencementDate"].forEach((field) => {
+      if (!row[field]) row.missingFields.push(field);
+    });
+  }
+  row.missingFieldsText = row.missingFields.join(", ");
+  return row;
+}
+
+function renderDashboardTable(rows) {
+  const body = rows.length ? rows.map((row) => {
+    const cells = dashboardRowToArray(row).map((value, index) => {
+      const key = columns.dashboard[index];
+      const field = dashboardColumnField(key);
+      const missing = field && row.missingFields.includes(field);
+      const className = missing || (key === "Missing Fields" && row.missingFields.length) ? "missing-cell" : "";
+      return `<td class="${className}">${escapeHTML(value)}</td>`;
+    }).join("");
+    return `<tr>${cells}</tr>`;
+  }).join("") : `<tr><td colspan="${columns.dashboard.length}">No records yet.</td></tr>`;
+  document.getElementById("dashResult").innerHTML = `
+    <table>
+      <thead><tr>${columns.dashboard.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}</tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  `;
+}
+
+function dashboardRowToArray(row) {
+  return [
+    row.submissionDate,
+    row.policyNo,
+    row.planName,
+    row.status,
+    row.brokerName,
+    row.issueDate,
+    row.currency,
+    row.sumAssured,
+    row.paymentMode,
+    row.modalPremium,
+    row.riskCommencementDate,
+    row.missingFieldsText
+  ];
+}
+
+function dashboardColumnField(label) {
+  return {
+    "Submission Date": "submissionDate",
+    "Policy Number": "policyNo",
+    "Plan Name": "planName",
+    "Status": "status",
+    "Broker Name": "brokerName",
+    "Issue Date": "issueDate",
+    "Policy Currency": "currency",
+    "Sum Assured": "sumAssured",
+    "Payment Mode": "paymentMode",
+    "Modal Premium": "modalPremium",
+    "Risk Commencement Date": "riskCommencementDate"
+  }[label];
+}
+
+function summarizeDashboardPie(rows, field) {
+  const map = new Map();
+  rows.forEach((row) => {
+    const key = clean(row[field]) || "(blank)";
+    map.set(key, (map.get(key) || 0) + 1);
+  });
+  return Array.from(map.entries()).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
+}
+
+function renderPieChart(slicesInput, pieField) {
   const canvas = document.getElementById("dashPieChart");
   const legend = document.getElementById("dashChartLegend");
   const status = document.getElementById("dashChartStatus");
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const slices = groupSummary
-    .map((item) => ({ label: item.group || "(blank)", value: chartBasis === "sum" ? item.total : item.count }))
-    .filter((item) => item.value > 0);
+  const slices = slicesInput.filter((item) => item.value > 0);
   if (!slices.length) {
     legend.innerHTML = "";
-    status.textContent = "Set a Group column and analyze data to show chart.";
+    status.textContent = "Build dashboard to show chart.";
     return;
   }
   const total = slices.reduce((sum, item) => sum + item.value, 0);
@@ -211,17 +361,17 @@ function renderPieChart(groupSummary, chartBasis) {
   ctx.fillStyle = "#17211f";
   ctx.font = "700 16px system-ui, sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText(chartBasis === "sum" ? "Sum" : "Cases", 140, 136);
+  ctx.fillText("Policies", 140, 136);
   ctx.font = "600 12px system-ui, sans-serif";
   ctx.fillText(formatInteger(total), 140, 154);
   legend.innerHTML = slices.map((slice, index) => `
     <div class="legend-item">
       <span class="legend-swatch" style="background:${colors[index % colors.length]}"></span>
       <span>${escapeHTML(slice.label)}</span>
-      <strong>${chartBasis === "sum" ? formatAmount(slice.value) : formatInteger(slice.value)}</strong>
+      <strong>${formatInteger(slice.value)}</strong>
     </div>
   `).join("");
-  status.textContent = chartBasis === "sum" ? "Grouped by Sum Assured." : "Grouped by case count.";
+  status.textContent = `Grouped by ${dashboardFilterFields().find((field) => field.key === pieField)?.label || "selected field"}.`;
 }
 
 function bindCommentTool() {
@@ -507,11 +657,12 @@ function resetActiveTool() {
     document.getElementById("copyDashboard").disabled = true;
     document.getElementById("exportDashboard").disabled = true;
     document.getElementById("dashMetrics").innerHTML = `
-      <article class="stat-card compact-stat"><span class="stat-value">0</span><span class="stat-label">No. of cases</span></article>
+      <article class="stat-card compact-stat"><span class="stat-value">0</span><span class="stat-label">Policies shown</span></article>
       <article class="stat-card compact-stat"><span class="stat-value">0</span><span class="stat-label">Total Sum Assured</span></article>
-      <article class="stat-card compact-stat"><span class="stat-value">0</span><span class="stat-label">Largest Sum Assured</span></article>
+      <article class="stat-card compact-stat"><span class="stat-value">0</span><span class="stat-label">Missing lookup / values</span></article>
     `;
-    renderPieChart([], "count");
+    renderDashboardFilters();
+    renderPieChart([], "status");
   }
   if (active?.id === "tool-edd") {
     state.edd = [];
