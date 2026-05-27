@@ -9,9 +9,9 @@ Open `index.html` directly in a browser. No server or install step is required.
 | Tool | Purpose | Output |
 | --- | --- | --- |
 | Comment Converter | Replaces lines containing only `Reply` with underline separators. | Copy-ready text |
-| EDD Checking | Filters Table 1 by `DD/MM/YYYY` date range, joins policy details from Table 2, and checks Table 3 membership. | On-screen result and CSV |
-| HRC Extractor | Filters pasted AML policy data by issue date, risk level and Everest broker rules. | Highlighted table and CSV |
 | Actimize Report | Builds Part A daily summary and Part B policy ageing list from Ready / Investigation rows. | Copy-ready report and CSV |
+| HRC Extractor | Filters pasted AML policy data by issue date, risk level and Everest broker rules. | Highlighted table and CSV |
+| EDD Checking | Filters Table 1 by `DD/MM/YYYY` date range, joins policy details from Table 2, and checks Table 3 membership. | On-screen result and CSV |
 
 ## For Users
 
@@ -53,4 +53,4 @@ The helper script automatically classifies the requested update as major or mino
 
 ## Current Version
 
-`0.1.0`
+`0.2.0`

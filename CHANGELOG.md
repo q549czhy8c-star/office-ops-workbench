@@ -2,6 +2,12 @@
 
 All notable changes to Office Ops Workbench are recorded here. Version type is determined before each release using `scripts/version.mjs`.
 
+## [0.2.0] - 2026-05-27
+
+### Minor
+
+- Reordered tool navigation and dashboard cards to: Comment Converter, Actimize Report, HRC Extractor, EDD Checking.
+
 ## [0.1.0] - 2026-05-27
 
 ### Minor
