@@ -8,6 +8,7 @@ Open `index.html` directly in a browser. No server or install step is required.
 
 | Tool | Purpose | Output |
 | --- | --- | --- |
+| Dashboard Analyzer | Counts pasted Excel cases and calculates total / largest Sum Assured from user-defined columns. | On-screen summary, copy text and CSV |
 | Comment Converter | Replaces lines containing only `Reply` with underline separators. | Copy-ready text |
 | Actimize Report | Builds Part A daily summary and Part B policy ageing list from Ready / Investigation rows. | Copy-ready report and CSV |
 | HRC Extractor | Filters pasted AML policy data by issue date, risk level and Everest broker rules. | Highlighted table and CSV |
@@ -53,4 +54,4 @@ The helper script automatically classifies the requested update as major or mino
 
 ## Current Version
 
-`0.2.0`
+`0.3.0`

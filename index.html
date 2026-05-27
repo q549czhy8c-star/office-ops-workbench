@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Office Ops Workbench</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=0.3.0">
 </head>
 <body>
   <div class="app-shell">
@@ -59,54 +59,70 @@
       </header>
 
       <section class="tool-panel active" id="tool-dashboard" data-title="Dashboard">
-        <div class="dashboard-grid">
-          <article class="overview-panel">
-            <div class="panel-copy">
-              <p class="eyebrow">Current workspace</p>
-              <h3>One calm surface for repeated office checks.</h3>
-              <p>Paste Excel ranges, transform comments, filter policy records and export CSV reports without leaving the browser.</p>
-            </div>
-            <div class="visual-strip" aria-hidden="true">
-              <span></span><span></span><span></span><span></span>
-            </div>
-          </article>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Ad hoc Excel analysis</p>
+            <h3>Dashboard Analyzer</h3>
+          </div>
+          <p>Paste Excel data, define the case and Sum Assured columns, then calculate core portfolio metrics.</p>
+        </div>
 
-          <article class="stat-card">
-            <span class="stat-value">4</span>
-            <span class="stat-label">Integrated tools</span>
-          </article>
-          <article class="stat-card">
-            <span class="stat-value">CSV</span>
-            <span class="stat-label">Export-ready reports</span>
-          </article>
-          <article class="stat-card">
+        <div class="dashboard-layout">
+          <div class="dashboard-main">
+            <div class="control-grid three dashboard-controls">
+              <label class="field compact">
+                <span>Case column</span>
+                <input id="dashCaseCol" type="text" value="A">
+              </label>
+              <label class="field compact">
+                <span>Sum Assured column</span>
+                <input id="dashSumCol" type="text" value="B">
+              </label>
+              <label class="field compact">
+                <span>Group column</span>
+                <input id="dashGroupCol" type="text" placeholder="Optional">
+              </label>
+            </div>
+
+            <label class="field">
+              <span>Excel data</span>
+              <small>Paste tab-delimited rows from Excel. Header row is optional.</small>
+              <textarea id="dashInput" placeholder="Paste Excel data here..."></textarea>
+            </label>
+
+            <div class="action-row">
+              <button class="primary-button" id="processDashboard" type="button">Analyze</button>
+              <button class="secondary-button" id="copyDashboard" type="button" disabled>Copy Summary</button>
+              <button class="secondary-button" id="exportDashboard" type="button" disabled>Export CSV</button>
+              <span class="status-text" id="dashStatus" role="status"></span>
+            </div>
+          </div>
+
+          <aside class="copy-links" aria-label="Copy links">
+            <h4>Copy Links</h4>
+            <button class="link-copy-item" data-copy-value="\\192.168.50.71\ReportFolder\GLHK\LIFE\OPS\REPORT\IL_LifeAsia_HKL_OPS_AML_Ind_Report_GLHK_PRD" type="button">
+              <span>AML report folder</span>
+              <code>\\192.168.50.71\ReportFolder\...</code>
+            </button>
+          </aside>
+        </div>
+
+        <div class="metric-grid" id="dashMetrics">
+          <article class="stat-card compact-stat">
             <span class="stat-value">0</span>
-            <span class="stat-label">Server dependency</span>
+            <span class="stat-label">No. of cases</span>
+          </article>
+          <article class="stat-card compact-stat">
+            <span class="stat-value">0</span>
+            <span class="stat-label">Total Sum Assured</span>
+          </article>
+          <article class="stat-card compact-stat">
+            <span class="stat-value">0</span>
+            <span class="stat-label">Largest Sum Assured</span>
           </article>
         </div>
 
-        <div class="tool-cards">
-          <button class="tool-card" data-tool-jump="comment" type="button">
-            <span class="card-kicker">Text</span>
-            <strong>Comment Converter</strong>
-            <span>Replace standalone Reply lines with underline separators.</span>
-          </button>
-          <button class="tool-card" data-tool-jump="actimize" type="button">
-            <span class="card-kicker">Report</span>
-            <strong>Actimize Report</strong>
-            <span>Generate daily status summary and ageing policy list.</span>
-          </button>
-          <button class="tool-card" data-tool-jump="hrc" type="button">
-            <span class="card-kicker">Risk</span>
-            <strong>HRC Extractor</strong>
-            <span>Filter low-risk or Everest policy records and highlight review cases.</span>
-          </button>
-          <button class="tool-card" data-tool-jump="edd" type="button">
-            <span class="card-kicker">Excel</span>
-            <strong>EDD Checking</strong>
-            <span>Match date-filtered policy records against details and exclusion lists.</span>
-          </button>
-        </div>
+        <div class="table-wrap" id="dashResult"></div>
       </section>
 
       <section class="tool-panel" id="tool-comment" data-title="Comment Converter">
@@ -250,6 +266,6 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js"></script>
+  <script src="app.js?v=0.3.0"></script>
 </body>
 </html>

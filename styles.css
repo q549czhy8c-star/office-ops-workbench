@@ -219,7 +219,8 @@ button:disabled {
   display: block;
 }
 
-.dashboard-grid {
+.dashboard-grid,
+.metric-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
@@ -229,6 +230,8 @@ button:disabled {
 .overview-panel,
 .stat-card,
 .tool-card,
+.copy-links,
+.dashboard-main,
 .tool-panel:not(#tool-dashboard) {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -346,6 +349,89 @@ button:disabled {
 
 .tool-panel:not(#tool-dashboard) {
   padding: 24px;
+}
+
+#tool-dashboard {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+#tool-dashboard.active {
+  display: block;
+}
+
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  align-items: start;
+}
+
+.dashboard-main,
+.copy-links {
+  box-shadow: none;
+  padding: 16px;
+}
+
+.dashboard-controls {
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+}
+
+.metric-grid {
+  margin-top: 16px;
+}
+
+.compact-stat {
+  min-height: 92px;
+  padding: 16px;
+}
+
+.compact-stat .stat-value {
+  font-size: 1.45rem;
+  line-height: 1.1;
+}
+
+.copy-links {
+  display: grid;
+  gap: 10px;
+}
+
+.copy-links h4 {
+  margin: 0;
+}
+
+.link-copy-item {
+  appearance: none;
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  min-height: 62px;
+  padding: 12px;
+  color: var(--ink);
+  background: #fbfcfc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.link-copy-item:hover {
+  border-color: #9bc6bb;
+  background: #f2f8f6;
+}
+
+.link-copy-item span {
+  font-weight: 900;
+}
+
+.link-copy-item code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .section-heading {
@@ -594,6 +680,9 @@ tr:last-child td {
   .two-column,
   .control-grid,
   .control-grid.three,
+  .dashboard-layout,
+  .dashboard-controls,
+  .metric-grid,
   .report-grid,
   .path-bar {
     grid-template-columns: 1fr;

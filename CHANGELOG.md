@@ -2,6 +2,16 @@
 
 All notable changes to Office Ops Workbench are recorded here. Version type is determined before each release using `scripts/version.mjs`.
 
+## [0.3.0] - 2026-05-27
+
+### Minor
+
+- Changed Dashboard into a functional analyzer for pasted Excel data.
+- Added configurable case, Sum Assured and optional group columns.
+- Added case count, unique case count, total Sum Assured, largest Sum Assured, copy summary and CSV export.
+- Added a dashboard copy-link area for report paths and future hyperlinks.
+- Reduced the dashboard's visual scale so the first screen is more work-focused.
+
 ## [0.2.0] - 2026-05-27
 
 ### Minor
