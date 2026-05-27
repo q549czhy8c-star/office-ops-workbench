@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Office Ops Workbench</title>
-  <link rel="stylesheet" href="styles.css?v=1.0.0">
+  <link rel="stylesheet" href="styles.css?v=1.1.0">
 </head>
 <body>
   <div class="app-shell">
@@ -64,7 +64,7 @@
             <p class="eyebrow">Ad hoc Excel analysis</p>
             <h3>Dashboard Analyzer</h3>
           </div>
-          <p>Paste Excel data, define the case and Sum Assured columns, then calculate core portfolio metrics.</p>
+          <p>Paste one or two Excel tables, define the columns, then calculate core metrics and group distribution.</p>
         </div>
 
         <div class="dashboard-layout">
@@ -82,12 +82,28 @@
                 <span>Group column</span>
                 <input id="dashGroupCol" type="text" placeholder="Optional">
               </label>
+              <label class="field compact">
+                <span>Extra value columns</span>
+                <input id="dashExtraCols" type="text" placeholder="C,D,E">
+              </label>
+              <label class="field compact">
+                <span>Pie chart by</span>
+                <select id="dashChartBasis">
+                  <option value="count">Case count</option>
+                  <option value="sum">Sum Assured</option>
+                </select>
+              </label>
             </div>
 
-            <label class="field">
-              <span>Excel data</span>
+            <label class="field dashboard-table-input">
+              <span>Primary Excel data</span>
               <small>Paste tab-delimited rows from Excel. Header row is optional.</small>
               <textarea id="dashInput" placeholder="Paste Excel data here..."></textarea>
+            </label>
+            <label class="field dashboard-table-input">
+              <span>Secondary Excel data</span>
+              <small>Optional. Use this when values come from another report table with the same column setup.</small>
+              <textarea id="dashInputSecondary" placeholder="Paste another table here if needed..."></textarea>
             </label>
 
             <div class="action-row">
@@ -100,9 +116,13 @@
 
           <aside class="copy-links" aria-label="Copy links">
             <h4>Copy Links</h4>
-            <button class="link-copy-item" data-copy-value="\\192.168.50.71\ReportFolder\GLHK\LIFE\OPS\REPORT\IL_LifeAsia_HKL_OPS_AML_Ind_Report_GLHK_PRD" type="button">
-              <span>AML report folder</span>
-              <code>\\192.168.50.71\ReportFolder\...</code>
+            <button class="link-copy-item" data-copy-value="\\192.168.50.71\ReportFolder\GLHK\LIFE\OPS\REPORT\IL_LifeAsia_HKL_OPS_PolicyExt_GLHK_PRD" type="button">
+              <span>Monthly Report check Sum Assured / Plan code / Premium</span>
+              <code>\\192.168.50.71\ReportFolder\GLHK\LIFE\OPS\REPORT\IL_LifeAsia_HKL_OPS_PolicyExt_GLHK_PRD</code>
+            </button>
+            <button class="link-copy-item" data-copy-value="\\192.168.50.71\ReportFolder\GLHK\LIFE\OPS\REPORT\IL_LifeAsia_HKL_OPS_Policy_List_GLHK_PRD." type="button">
+              <span>Daily Report check Plan name / Premium / Submission</span>
+              <code>\\192.168.50.71\ReportFolder\GLHK\LIFE\OPS\REPORT\IL_LifeAsia_HKL_OPS_Policy_List_GLHK_PRD.</code>
             </button>
           </aside>
         </div>
@@ -123,6 +143,16 @@
         </div>
 
         <div class="table-wrap" id="dashResult"></div>
+        <div class="chart-panel" id="dashChartPanel">
+          <div class="chart-header">
+            <h4>Pie Chart</h4>
+            <span id="dashChartStatus">Analyze grouped data to show chart.</span>
+          </div>
+          <div class="chart-layout">
+            <canvas id="dashPieChart" width="280" height="280" aria-label="Dashboard pie chart"></canvas>
+            <div class="chart-legend" id="dashChartLegend"></div>
+          </div>
+        </div>
       </section>
 
       <section class="tool-panel" id="tool-comment" data-title="Comment Converter">
@@ -267,6 +297,6 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=1.0.0"></script>
+  <script src="app.js?v=1.1.0"></script>
 </body>
 </html>

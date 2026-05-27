@@ -1,4 +1,4 @@
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.1.0";
 const HRC_DISPLAY_LIMIT = 500;
 
 const state = {
@@ -54,18 +54,25 @@ function bindDashboardTool() {
     const sumIndex = excelColToIndex(document.getElementById("dashSumCol").value);
     const groupValue = clean(document.getElementById("dashGroupCol").value);
     const groupIndex = groupValue ? excelColToIndex(groupValue) : -1;
-    const rows = excelToArray(document.getElementById("dashInput").value).filter((row) => row.some((cell) => clean(cell)));
+    const extraIndexes = parseColumnList(document.getElementById("dashExtraCols").value);
+    const chartBasis = document.getElementById("dashChartBasis").value;
+    const datasets = [
+      { source: "Primary", rows: getDashboardRows("dashInput", [caseIndex, sumIndex, groupIndex, ...extraIndexes]) },
+      { source: "Secondary", rows: getDashboardRows("dashInputSecondary", [caseIndex, sumIndex, groupIndex, ...extraIndexes]) }
+    ].filter((dataset) => dataset.rows.length);
+    const rows = datasets.flatMap((dataset) => dataset.rows.map((row) => ({ source: dataset.source, row })));
 
     if (!rows.length) {
       setStatus("dashStatus", "Paste Excel data first.");
       return;
     }
 
-    const dataRows = detectHeaderRow(rows, [caseIndex, sumIndex]) ? rows.slice(1) : rows;
-    const items = dataRows.map((row) => ({
+    const items = rows.map(({ source, row }) => ({
+      source,
       caseNo: clean(row[caseIndex]),
       sumAssured: parseAmount(row[sumIndex]),
-      group: groupIndex >= 0 ? clean(row[groupIndex]) : ""
+      group: groupIndex >= 0 ? clean(row[groupIndex]) : "",
+      extras: extraIndexes.map((index) => clean(row[index]))
     })).filter((item) => item.caseNo || item.sumAssured > 0 || item.group);
 
     const validSums = items.map((item) => item.sumAssured).filter((value) => Number.isFinite(value));
@@ -75,6 +82,8 @@ function bindDashboardTool() {
     const largestSum = validSums.length ? Math.max(...validSums) : 0;
     const largestCase = items.find((item) => item.sumAssured === largestSum)?.caseNo || "";
     const groupSummary = groupIndex >= 0 ? summarizeByGroup(items) : [];
+    const sourceSummary = summarizeBySource(items);
+    const extraSummary = summarizeExtras(items, extraIndexes);
 
     state.dashboard = {
       caseCount,
@@ -82,7 +91,10 @@ function bindDashboardTool() {
       totalSum,
       largestSum,
       largestCase,
-      groupSummary
+      groupSummary,
+      sourceSummary,
+      extraSummary,
+      chartBasis
     };
 
     renderDashboard();
@@ -110,7 +122,7 @@ function bindDashboardTool() {
 }
 
 function renderDashboard() {
-  const { caseCount, uniqueCaseCount, totalSum, largestSum, largestCase, groupSummary } = state.dashboard;
+  const { caseCount, uniqueCaseCount, totalSum, largestSum, largestCase, groupSummary, sourceSummary, extraSummary, chartBasis } = state.dashboard;
   document.getElementById("dashMetrics").innerHTML = `
     <article class="stat-card compact-stat">
       <span class="stat-value">${formatInteger(caseCount)}</span>
@@ -133,12 +145,23 @@ function renderDashboard() {
     ["Largest Sum Assured", formatAmount(largestSum)],
     ["Largest case", largestCase || "-"]
   ];
+  if (sourceSummary.length > 1) {
+    rows.push(["", ""]);
+    rows.push(["Source", "Cases / Total Sum Assured"]);
+    sourceSummary.forEach((item) => rows.push([item.source, `${formatInteger(item.count)} / ${formatAmount(item.total)}`]));
+  }
+  if (extraSummary.length) {
+    rows.push(["", ""]);
+    rows.push(["Extra column", "Distinct non-empty values"]);
+    extraSummary.forEach((item) => rows.push([item.column, formatInteger(item.distinctCount)]));
+  }
   if (groupSummary.length) {
     rows.push(["", ""]);
     rows.push(["Group", "Cases / Total Sum Assured"]);
     groupSummary.forEach((item) => rows.push([item.group || "(blank)", `${formatInteger(item.count)} / ${formatAmount(item.total)}`]));
   }
   renderTable("dashResult", columns.dashboard, rows);
+  renderPieChart(groupSummary, chartBasis);
 }
 
 function getDashboardSummary(separator) {
@@ -146,6 +169,59 @@ function getDashboardSummary(separator) {
     Array.from(tr.children).map((td) => td.innerText)
   ));
   return [columns.dashboard.join(separator), ...rows.map((row) => row.join(separator))].join("\n");
+}
+
+function getDashboardRows(inputId, headerIndexes) {
+  const rows = excelToArray(document.getElementById(inputId).value).filter((row) => row.some((cell) => clean(cell)));
+  if (!rows.length) return [];
+  return detectHeaderRow(rows, headerIndexes.filter((index) => index >= 0)) ? rows.slice(1) : rows;
+}
+
+function renderPieChart(groupSummary, chartBasis) {
+  const canvas = document.getElementById("dashPieChart");
+  const legend = document.getElementById("dashChartLegend");
+  const status = document.getElementById("dashChartStatus");
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const slices = groupSummary
+    .map((item) => ({ label: item.group || "(blank)", value: chartBasis === "sum" ? item.total : item.count }))
+    .filter((item) => item.value > 0);
+  if (!slices.length) {
+    legend.innerHTML = "";
+    status.textContent = "Set a Group column and analyze data to show chart.";
+    return;
+  }
+  const total = slices.reduce((sum, item) => sum + item.value, 0);
+  const colors = ["#176b5d", "#c1842d", "#465e90", "#7f5b43", "#5e8c61", "#b75d69", "#65737e", "#9b7b35"];
+  let startAngle = -Math.PI / 2;
+  slices.forEach((slice, index) => {
+    const angle = (slice.value / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(140, 140);
+    ctx.arc(140, 140, 112, startAngle, startAngle + angle);
+    ctx.closePath();
+    ctx.fillStyle = colors[index % colors.length];
+    ctx.fill();
+    startAngle += angle;
+  });
+  ctx.beginPath();
+  ctx.arc(140, 140, 54, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.fillStyle = "#17211f";
+  ctx.font = "700 16px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(chartBasis === "sum" ? "Sum" : "Cases", 140, 136);
+  ctx.font = "600 12px system-ui, sans-serif";
+  ctx.fillText(formatInteger(total), 140, 154);
+  legend.innerHTML = slices.map((slice, index) => `
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:${colors[index % colors.length]}"></span>
+      <span>${escapeHTML(slice.label)}</span>
+      <strong>${chartBasis === "sum" ? formatAmount(slice.value) : formatInteger(slice.value)}</strong>
+    </div>
+  `).join("");
+  status.textContent = chartBasis === "sum" ? "Grouped by Sum Assured." : "Grouped by case count.";
 }
 
 function bindCommentTool() {
@@ -435,6 +511,7 @@ function resetActiveTool() {
       <article class="stat-card compact-stat"><span class="stat-value">0</span><span class="stat-label">Total Sum Assured</span></article>
       <article class="stat-card compact-stat"><span class="stat-value">0</span><span class="stat-label">Largest Sum Assured</span></article>
     `;
+    renderPieChart([], "count");
   }
   if (active?.id === "tool-edd") {
     state.edd = [];
@@ -494,6 +571,10 @@ function excelColToIndex(colName) {
   return result - 1;
 }
 
+function parseColumnList(value) {
+  return clean(value).split(",").map((item) => clean(item)).filter(Boolean).map(excelColToIndex);
+}
+
 function detectHeaderRow(rows, indexes) {
   const first = rows[0] || [];
   if (rows.length <= 1) return false;
@@ -510,6 +591,17 @@ function parseAmount(value) {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
+function summarizeBySource(items) {
+  const map = new Map();
+  items.forEach((item) => {
+    const current = map.get(item.source) || { source: item.source, count: 0, total: 0 };
+    current.count++;
+    current.total += Number.isFinite(item.sumAssured) ? item.sumAssured : 0;
+    map.set(item.source, current);
+  });
+  return Array.from(map.values());
+}
+
 function summarizeByGroup(items) {
   const map = new Map();
   items.forEach((item) => {
@@ -520,6 +612,24 @@ function summarizeByGroup(items) {
     map.set(key, current);
   });
   return Array.from(map.values()).sort((a, b) => b.total - a.total);
+}
+
+function summarizeExtras(items, extraIndexes) {
+  return extraIndexes.map((index, position) => {
+    const values = new Set(items.map((item) => item.extras[position]).filter(Boolean));
+    return { column: indexToExcelCol(index), distinctCount: values.size };
+  }).filter((item) => item.distinctCount > 0);
+}
+
+function indexToExcelCol(index) {
+  let value = index + 1;
+  let col = "";
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    col = String.fromCharCode(65 + remainder) + col;
+    value = Math.floor((value - 1) / 26);
+  }
+  return col;
 }
 
 function formatInteger(value) {

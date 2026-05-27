@@ -2,6 +2,15 @@
 
 All notable changes to Office Ops Workbench are recorded here. Version type is determined before each release using `scripts/version.mjs`.
 
+## [1.1.0] - 2026-05-27
+
+### Minor
+
+- Updated Dashboard copy links for Monthly PolicyExt and Daily Policy List report folders.
+- Added secondary table paste support for Dashboard analysis.
+- Added extra value column summaries for flexible checks such as plan code, premium, plan name and submission values.
+- Added Dashboard pie chart grouped by case count or Sum Assured.
+
 ## [1.0.0] - 2026-05-27
 
 ### Major
