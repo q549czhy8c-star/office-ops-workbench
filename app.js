@@ -1,4 +1,5 @@
-const APP_VERSION = "0.3.0";
+const APP_VERSION = "1.0.0";
+const HRC_DISPLAY_LIMIT = 500;
 
 const state = {
   dashboard: null,
@@ -232,8 +233,7 @@ function bindHrcTool() {
     const start = parseInt(document.getElementById("hrcStart").value, 10) || 0;
     const end = parseInt(document.getElementById("hrcEnd").value, 10) || 99999999;
 
-    state.hrc = rawData.split("\n").flatMap((row) => {
-      const cols = row.split("\t");
+    state.hrc = excelToArray(rawData).flatMap((cols) => {
       if (cols.length < 41) return [];
       const item = {
         policyNo: cols[1] || "",
@@ -253,7 +253,7 @@ function bindHrcTool() {
       return inDateRange && (isTargetRisk || isEverest) ? [item] : [];
     }).sort((a, b) => a.issueDateNum - b.issueDateNum);
 
-    renderTable("hrcResult", columns.hrc, state.hrc.map((item) => {
+    renderTable("hrcResult", columns.hrc, state.hrc.slice(0, HRC_DISPLAY_LIMIT).map((item) => {
       const rowClass = getHrcRowClass(item);
       return {
         className: rowClass,
@@ -271,7 +271,8 @@ function bindHrcTool() {
       };
     }));
     document.getElementById("exportHrc").disabled = state.hrc.length === 0;
-    setStatus("hrcStatus", `${state.hrc.length} filtered record(s).`);
+    const shown = Math.min(state.hrc.length, HRC_DISPLAY_LIMIT);
+    setStatus("hrcStatus", `${state.hrc.length} filtered record(s). Showing ${shown}. CSV export includes all records.`);
   });
 
   document.getElementById("exportHrc").addEventListener("click", () => {
@@ -308,7 +309,7 @@ function bindActimizeTool() {
       summaryMap[dateKey] ||= { date: dateKey, ready: 0, investigation: 0 };
       summaryMap[dateKey][statusLower]++;
       state.actList.push({
-        policyNo: clean(cols[idxPolicy]),
+        policyNo: extractPolicyNumber(cols[idxPolicy]),
         daysDiff: diffDays,
         remark: isOver21 ? "Over 21 Days" : ""
       });
@@ -367,6 +368,10 @@ function getActimizeCombined(separator) {
     text += [row.policyNo, row.daysDiff, row.remark].join(separator) + "\n";
   });
   return text;
+}
+
+function extractPolicyNumber(text) {
+  return clean(text).substring(9, 17);
 }
 
 function getHrcRowClass(item) {

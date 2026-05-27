@@ -2,6 +2,16 @@
 
 All notable changes to Office Ops Workbench are recorded here. Version type is determined before each release using `scripts/version.mjs`.
 
+## [1.0.0] - 2026-05-27
+
+### Major
+
+- Renamed Actimize Report to NiceActimize Report.
+- Renamed HRC Extractor to High Risk Client Extractor.
+- Changed NiceActimize default Status column to F and Policy column to G.
+- Changed NiceActimize policy number extraction to use Excel-style `MID(text,10,8)`.
+- Optimized High Risk Client Extractor for large pasted data by rendering a limited on-screen preview while preserving full CSV export.
+
 ## [0.3.0] - 2026-05-27
 
 ### Minor

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Office Ops Workbench</title>
-  <link rel="stylesheet" href="styles.css?v=0.3.0">
+  <link rel="stylesheet" href="styles.css?v=1.0.0">
 </head>
 <body>
   <div class="app-shell">
@@ -28,11 +28,11 @@
         </button>
         <button class="nav-item" data-tool="actimize" type="button">
           <span class="nav-icon" aria-hidden="true">A</span>
-          Actimize Report
+          NiceActimize Report
         </button>
         <button class="nav-item" data-tool="hrc" type="button">
           <span class="nav-icon" aria-hidden="true">H</span>
-          HRC Extractor
+          High Risk Client Extractor
         </button>
         <button class="nav-item" data-tool="edd" type="button">
           <span class="nav-icon" aria-hidden="true">E</span>
@@ -193,11 +193,11 @@
         <div class="table-wrap" id="eddResult"></div>
       </section>
 
-      <section class="tool-panel" id="tool-hrc" data-title="HRC Extractor">
+      <section class="tool-panel" id="tool-hrc" data-title="High Risk Client Extractor">
         <div class="section-heading">
           <div>
             <p class="eyebrow">AML report filtering</p>
-            <h3>HRC Extractor</h3>
+            <h3>High Risk Client Extractor</h3>
           </div>
           <p>Paste the AML Excel range, filter by issue date and risk logic, then export the sorted result.</p>
         </div>
@@ -228,11 +228,11 @@
         <div class="table-wrap" id="hrcResult"></div>
       </section>
 
-      <section class="tool-panel" id="tool-actimize" data-title="Actimize Report">
+      <section class="tool-panel" id="tool-actimize" data-title="NiceActimize Report">
         <div class="section-heading">
           <div>
             <p class="eyebrow">Dashboard reporting</p>
-            <h3>Actimize Report</h3>
+            <h3>NiceActimize Report</h3>
           </div>
           <p>Generate Part A daily summary and Part B ageing list for Ready / Investigation items.</p>
         </div>
@@ -243,16 +243,17 @@
           </label>
           <label class="field compact">
             <span>Status column</span>
-            <input id="actStatusCol" type="text" value="G">
+            <input id="actStatusCol" type="text" value="F">
           </label>
           <label class="field compact">
             <span>Policy column</span>
-            <input id="actPolicyCol" type="text" value="H">
+            <input id="actPolicyCol" type="text" value="G">
           </label>
         </div>
         <label class="field">
           <span>Excel data</span>
-          <textarea id="actInput" placeholder="Paste Actimize Excel data here..."></textarea>
+          <small>Policy number is extracted from the policy column using Excel-style MID(text,10,8).</small>
+          <textarea id="actInput" placeholder="Paste NiceActimize Excel data here..."></textarea>
         </label>
         <div class="action-row">
           <button class="primary-button" id="processActimize" type="button">Generate Report</button>
@@ -266,6 +267,6 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=0.3.0"></script>
+  <script src="app.js?v=1.0.0"></script>
 </body>
 </html>

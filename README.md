@@ -10,8 +10,8 @@ Open `index.html` directly in a browser. No server or install step is required.
 | --- | --- | --- |
 | Dashboard Analyzer | Counts pasted Excel cases and calculates total / largest Sum Assured from user-defined columns. | On-screen summary, copy text and CSV |
 | Comment Converter | Replaces lines containing only `Reply` with underline separators. | Copy-ready text |
-| Actimize Report | Builds Part A daily summary and Part B policy ageing list from Ready / Investigation rows. | Copy-ready report and CSV |
-| HRC Extractor | Filters pasted AML policy data by issue date, risk level and Everest broker rules. | Highlighted table and CSV |
+| NiceActimize Report | Builds Part A daily summary and Part B policy ageing list from Ready / Investigation rows. Policy number is extracted with `MID(text,10,8)`. | Copy-ready report and CSV |
+| High Risk Client Extractor | Filters pasted AML policy data by issue date, risk level and Everest broker rules. Large results render a limited preview while CSV export keeps all rows. | Highlighted table preview and full CSV |
 | EDD Checking | Filters Table 1 by `DD/MM/YYYY` date range, joins policy details from Table 2, and checks Table 3 membership. | On-screen result and CSV |
 
 ## For Users
@@ -54,4 +54,4 @@ The helper script automatically classifies the requested update as major or mino
 
 ## Current Version
 
-`0.3.0`
+`1.0.0`
