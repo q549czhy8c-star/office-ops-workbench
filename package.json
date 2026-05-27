@@ -1,0 +1,18 @@
+{
+  "name": "office-ops-workbench",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Unified local web app for office document utilities, Excel data processing and dashboard reporting.",
+  "scripts": {
+    "version:next": "node scripts/version.mjs",
+    "serve": "python3 -m http.server 4173"
+  },
+  "keywords": [
+    "office",
+    "excel",
+    "dashboard",
+    "csv",
+    "local-first"
+  ],
+  "license": "UNLICENSED"
+}

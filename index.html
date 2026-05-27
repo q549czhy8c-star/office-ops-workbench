@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Office Ops Workbench</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">OW</div>
+        <div>
+          <p class="eyebrow">Office Tools</p>
+          <h1>Ops Workbench</h1>
+        </div>
+      </div>
+
+      <nav class="tool-nav" aria-label="Tools">
+        <button class="nav-item active" data-tool="dashboard" type="button">
+          <span class="nav-icon" aria-hidden="true">◆</span>
+          Dashboard
+        </button>
+        <button class="nav-item" data-tool="comment" type="button">
+          <span class="nav-icon" aria-hidden="true">T</span>
+          Comment Converter
+        </button>
+        <button class="nav-item" data-tool="edd" type="button">
+          <span class="nav-icon" aria-hidden="true">E</span>
+          EDD Checking
+        </button>
+        <button class="nav-item" data-tool="hrc" type="button">
+          <span class="nav-icon" aria-hidden="true">H</span>
+          HRC Extractor
+        </button>
+        <button class="nav-item" data-tool="actimize" type="button">
+          <span class="nav-icon" aria-hidden="true">A</span>
+          Actimize Report
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span>Version</span>
+        <strong id="appVersion">0.1.0</strong>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Unified office document, Excel and dashboard utilities</p>
+          <h2 id="pageTitle">Dashboard</h2>
+        </div>
+        <div class="topbar-actions">
+          <button class="ghost-button" id="resetActiveTool" type="button" title="Reset active tool">Reset</button>
+          <a class="primary-link" href="README.md" title="Open README">README</a>
+        </div>
+      </header>
+
+      <section class="tool-panel active" id="tool-dashboard" data-title="Dashboard">
+        <div class="dashboard-grid">
+          <article class="overview-panel">
+            <div class="panel-copy">
+              <p class="eyebrow">Current workspace</p>
+              <h3>One calm surface for repeated office checks.</h3>
+              <p>Paste Excel ranges, transform comments, filter policy records and export CSV reports without leaving the browser.</p>
+            </div>
+            <div class="visual-strip" aria-hidden="true">
+              <span></span><span></span><span></span><span></span>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <span class="stat-value">4</span>
+            <span class="stat-label">Integrated tools</span>
+          </article>
+          <article class="stat-card">
+            <span class="stat-value">CSV</span>
+            <span class="stat-label">Export-ready reports</span>
+          </article>
+          <article class="stat-card">
+            <span class="stat-value">0</span>
+            <span class="stat-label">Server dependency</span>
+          </article>
+        </div>
+
+        <div class="tool-cards">
+          <button class="tool-card" data-tool-jump="comment" type="button">
+            <span class="card-kicker">Text</span>
+            <strong>Comment Converter</strong>
+            <span>Replace standalone Reply lines with underline separators.</span>
+          </button>
+          <button class="tool-card" data-tool-jump="edd" type="button">
+            <span class="card-kicker">Excel</span>
+            <strong>EDD Checking</strong>
+            <span>Match date-filtered policy records against details and exclusion lists.</span>
+          </button>
+          <button class="tool-card" data-tool-jump="hrc" type="button">
+            <span class="card-kicker">Risk</span>
+            <strong>HRC Extractor</strong>
+            <span>Filter low-risk or Everest policy records and highlight review cases.</span>
+          </button>
+          <button class="tool-card" data-tool-jump="actimize" type="button">
+            <span class="card-kicker">Report</span>
+            <strong>Actimize Report</strong>
+            <span>Generate daily status summary and ageing policy list.</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="tool-panel" id="tool-comment" data-title="Comment Converter">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Document formatting</p>
+            <h3>Comment Converter</h3>
+          </div>
+          <p>Paste comment text. Lines containing only <code>Reply</code> become separator lines.</p>
+        </div>
+        <div class="two-column">
+          <label class="field">
+            <span>Input text</span>
+            <textarea id="commentInput" placeholder="Paste comment text here..."></textarea>
+          </label>
+          <label class="field">
+            <span>Converted output</span>
+            <textarea id="commentOutput" readonly placeholder="Converted text appears here..."></textarea>
+          </label>
+        </div>
+        <div class="action-row">
+          <button class="primary-button" id="convertComment" type="button">Convert</button>
+          <button class="secondary-button" id="copyComment" type="button">Copy Result</button>
+          <span class="status-text" id="commentStatus" role="status"></span>
+        </div>
+      </section>
+
+      <section class="tool-panel" id="tool-edd" data-title="EDD Checking">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Excel policy matching</p>
+            <h3>EDD Checking</h3>
+          </div>
+          <p>Filter Table 1 by date, join details from Table 2, then check whether policies appear in Table 3.</p>
+        </div>
+        <div class="control-grid">
+          <label class="field compact">
+            <span>Start date</span>
+            <input id="eddStart" type="text" placeholder="01/01/2026">
+          </label>
+          <label class="field compact">
+            <span>End date</span>
+            <input id="eddEnd" type="text" placeholder="31/01/2026">
+          </label>
+        </div>
+        <div class="input-stack">
+          <label class="field">
+            <span>Table 1: Date and policy number</span>
+            <small>Date in column A, policy number in column B.</small>
+            <textarea id="eddTable1" placeholder="Paste Table 1 from Excel..."></textarea>
+          </label>
+          <label class="field">
+            <span>Table 2: Details table</span>
+            <small>Uses B, F, W, AA, AK, AL, AM and AN.</small>
+            <textarea id="eddTable2" placeholder="Paste Table 2 from Excel..."></textarea>
+          </label>
+          <label class="field">
+            <span>Table 3: Exclusion or check list</span>
+            <small>Policy number in column C.</small>
+            <textarea id="eddTable3" placeholder="Paste Table 3 from Excel..."></textarea>
+          </label>
+        </div>
+        <div class="action-row">
+          <button class="primary-button" id="processEdd" type="button">Process</button>
+          <button class="secondary-button" id="exportEdd" type="button" disabled>Export CSV</button>
+          <span class="status-text" id="eddStatus" role="status"></span>
+        </div>
+        <div class="table-wrap" id="eddResult"></div>
+      </section>
+
+      <section class="tool-panel" id="tool-hrc" data-title="HRC Extractor">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">AML report filtering</p>
+            <h3>HRC Extractor</h3>
+          </div>
+          <p>Paste the AML Excel range, filter by issue date and risk logic, then export the sorted result.</p>
+        </div>
+        <div class="path-bar">
+          <span>Report path</span>
+          <code id="hrcPath">\\192.168.50.71\ReportFolder\GLHK\LIFE\OPS\REPORT\IL_LifeAsia_HKL_OPS_AML_Ind_Report_GLHK_PRD</code>
+          <button class="ghost-button" id="copyHrcPath" type="button">Copy</button>
+        </div>
+        <div class="control-grid">
+          <label class="field compact">
+            <span>Start date</span>
+            <input id="hrcStart" type="number" value="20260101">
+          </label>
+          <label class="field compact">
+            <span>End date</span>
+            <input id="hrcEnd" type="number" value="20261231">
+          </label>
+        </div>
+        <label class="field">
+          <span>Excel data</span>
+          <textarea id="hrcInput" placeholder="Paste Excel data here..."></textarea>
+        </label>
+        <div class="action-row">
+          <button class="primary-button" id="processHrc" type="button">Process and Sort</button>
+          <button class="secondary-button" id="exportHrc" type="button" disabled>Export CSV</button>
+          <span class="status-text" id="hrcStatus" role="status"></span>
+        </div>
+        <div class="table-wrap" id="hrcResult"></div>
+      </section>
+
+      <section class="tool-panel" id="tool-actimize" data-title="Actimize Report">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Dashboard reporting</p>
+            <h3>Actimize Report</h3>
+          </div>
+          <p>Generate Part A daily summary and Part B ageing list for Ready / Investigation items.</p>
+        </div>
+        <div class="control-grid three">
+          <label class="field compact">
+            <span>Date column</span>
+            <input id="actDateCol" type="text" value="C">
+          </label>
+          <label class="field compact">
+            <span>Status column</span>
+            <input id="actStatusCol" type="text" value="G">
+          </label>
+          <label class="field compact">
+            <span>Policy column</span>
+            <input id="actPolicyCol" type="text" value="H">
+          </label>
+        </div>
+        <label class="field">
+          <span>Excel data</span>
+          <textarea id="actInput" placeholder="Paste Actimize Excel data here..."></textarea>
+        </label>
+        <div class="action-row">
+          <button class="primary-button" id="processActimize" type="button">Generate Report</button>
+          <button class="secondary-button" id="copyActimize" type="button" disabled>Copy All</button>
+          <button class="secondary-button" id="exportActimize" type="button" disabled>Download CSV</button>
+          <span class="status-text" id="actStatus" role="status"></span>
+        </div>
+        <div class="report-grid" id="actResult"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

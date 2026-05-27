@@ -1,0 +1,421 @@
+const APP_VERSION = "0.1.0";
+
+const state = {
+  edd: [],
+  hrc: [],
+  actSummary: [],
+  actList: []
+};
+
+const columns = {
+  edd: ["Policy Number", "Policyholder", "Nationality", "Broker", "High Risk Ind", "Risk Level", "Comment", "Reason", "In Table 3"],
+  hrc: ["Policy No", "Issue Date", "Reason", "Comment", "Risk Level", "Broker", "Policyholder", "Nationality", "High Risk Ind"],
+  actSummary: ["Date", "Ready Count", "Investigation Count"],
+  actList: ["Policy No.", "Days Diff", "Remark"]
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("appVersion").textContent = APP_VERSION;
+  bindNavigation();
+  bindCommentTool();
+  bindEddTool();
+  bindHrcTool();
+  bindActimizeTool();
+  document.getElementById("resetActiveTool").addEventListener("click", resetActiveTool);
+});
+
+function bindNavigation() {
+  document.querySelectorAll("[data-tool], [data-tool-jump]").forEach((element) => {
+    element.addEventListener("click", () => {
+      const tool = element.dataset.tool || element.dataset.toolJump;
+      showTool(tool);
+    });
+  });
+}
+
+function showTool(tool) {
+  document.querySelectorAll(".nav-item").forEach((item) => {
+    item.classList.toggle("active", item.dataset.tool === tool);
+  });
+  document.querySelectorAll(".tool-panel").forEach((panel) => {
+    panel.classList.toggle("active", panel.id === `tool-${tool}`);
+  });
+  const activePanel = document.getElementById(`tool-${tool}`);
+  document.getElementById("pageTitle").textContent = activePanel?.dataset.title || "Dashboard";
+}
+
+function bindCommentTool() {
+  document.getElementById("convertComment").addEventListener("click", () => {
+    const input = document.getElementById("commentInput").value;
+    const converted = input.split("\n").map((line) => (
+      line.trim() === "Reply" ? "___________________________" : line
+    )).join("\n");
+    document.getElementById("commentOutput").value = converted;
+    setStatus("commentStatus", converted ? "Converted." : "No input yet.");
+  });
+
+  document.getElementById("copyComment").addEventListener("click", async () => {
+    const value = document.getElementById("commentOutput").value;
+    if (!value) return setStatus("commentStatus", "Nothing to copy.");
+    await copyText(value, "Converted comment copied.");
+    setStatus("commentStatus", "Copied.");
+  });
+}
+
+function bindEddTool() {
+  document.getElementById("processEdd").addEventListener("click", () => {
+    const start = parseDMY(document.getElementById("eddStart").value);
+    const end = parseDMY(document.getElementById("eddEnd").value);
+    if (!start || !end) return setStatus("eddStatus", "Enter valid DD/MM/YYYY date range.");
+
+    const table1 = excelToArray(document.getElementById("eddTable1").value);
+    const table2 = excelToArray(document.getElementById("eddTable2").value);
+    const table3 = excelToArray(document.getElementById("eddTable3").value);
+    const table3Set = new Set(table3.map((row) => clean(row[2])));
+    const validPolicies = table1
+      .filter((row) => {
+        const date = parseDMY(row[0]);
+        return date && date >= start && date <= end;
+      })
+      .map((row) => clean(row[1]))
+      .filter(Boolean);
+
+    state.edd = validPolicies.flatMap((policyNum) => {
+      const detail = table2.find((row) => clean(row[1]) === policyNum);
+      if (!detail) return [];
+      return [{
+        policyNum,
+        policyholder: detail[5] || "",
+        nationality: detail[22] || "",
+        broker: detail[26] || "",
+        highRiskInd: detail[36] || "",
+        riskLevel: detail[37] || "",
+        comment: detail[38] || "",
+        reason: detail[39] || "",
+        inTable3: table3Set.has(policyNum) ? "YES" : "NO"
+      }];
+    });
+
+    renderTable("eddResult", columns.edd, state.edd.map((row) => [
+      row.policyNum,
+      row.policyholder,
+      row.nationality,
+      row.broker,
+      row.highRiskInd,
+      row.riskLevel,
+      row.comment,
+      row.reason,
+      pill(row.inTable3, row.inTable3 === "YES" ? "yes" : "no")
+    ]));
+    document.getElementById("exportEdd").disabled = state.edd.length === 0;
+    setStatus("eddStatus", `${state.edd.length} matched record(s).`);
+  });
+
+  document.getElementById("exportEdd").addEventListener("click", () => {
+    exportCSV("EDD_Checking_Report", columns.edd, state.edd.map((row) => [
+      row.policyNum, row.policyholder, row.nationality, row.broker, row.highRiskInd,
+      row.riskLevel, row.comment, row.reason, row.inTable3
+    ]));
+  });
+}
+
+function bindHrcTool() {
+  document.getElementById("copyHrcPath").addEventListener("click", async () => {
+    await copyText(document.getElementById("hrcPath").innerText.trim(), "Report path copied.");
+  });
+
+  document.getElementById("processHrc").addEventListener("click", () => {
+    const rawData = document.getElementById("hrcInput").value;
+    const start = parseInt(document.getElementById("hrcStart").value, 10) || 0;
+    const end = parseInt(document.getElementById("hrcEnd").value, 10) || 99999999;
+
+    state.hrc = rawData.split("\n").flatMap((row) => {
+      const cols = row.split("\t");
+      if (cols.length < 41) return [];
+      const item = {
+        policyNo: cols[1] || "",
+        issueDateRaw: cols[12] || "",
+        issueDateNum: parseInt(cols[12], 10),
+        reason: cols[39] || "",
+        comment: cols[38] || "",
+        riskLevel: parseInt(cols[37], 10) || 0,
+        broker: cols[26] || "",
+        policyholder: cols[5] || "",
+        nationality: cols[22] || "",
+        highRiskInd: cols[36] || ""
+      };
+      const inDateRange = item.issueDateNum >= start && item.issueDateNum <= end;
+      const isTargetRisk = item.riskLevel <= 2;
+      const isEverest = item.broker.includes("Everest");
+      return inDateRange && (isTargetRisk || isEverest) ? [item] : [];
+    }).sort((a, b) => a.issueDateNum - b.issueDateNum);
+
+    renderTable("hrcResult", columns.hrc, state.hrc.map((item) => {
+      const rowClass = getHrcRowClass(item);
+      return {
+        className: rowClass,
+        cells: [
+          item.policyNo,
+          item.issueDateRaw,
+          item.reason,
+          item.comment,
+          item.riskLevel,
+          item.broker,
+          item.policyholder,
+          item.nationality,
+          item.highRiskInd
+        ]
+      };
+    }));
+    document.getElementById("exportHrc").disabled = state.hrc.length === 0;
+    setStatus("hrcStatus", `${state.hrc.length} filtered record(s).`);
+  });
+
+  document.getElementById("exportHrc").addEventListener("click", () => {
+    exportCSV("Sorted_Policy_Report_2026", columns.hrc, state.hrc.map((row) => [
+      row.policyNo, row.issueDateRaw, row.reason, row.comment, row.riskLevel,
+      row.broker, row.policyholder, row.nationality, row.highRiskInd
+    ]));
+  });
+}
+
+function bindActimizeTool() {
+  document.getElementById("processActimize").addEventListener("click", () => {
+    const idxDate = excelColToIndex(document.getElementById("actDateCol").value);
+    const idxStatus = excelColToIndex(document.getElementById("actStatusCol").value);
+    const idxPolicy = excelColToIndex(document.getElementById("actPolicyCol").value);
+    const maxIdx = Math.max(idxDate, idxStatus, idxPolicy);
+    const summaryMap = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    state.actList = [];
+
+    document.getElementById("actInput").value.split("\n").forEach((row) => {
+      if (!row.trim()) return;
+      const cols = row.split("\t");
+      if (cols.length <= maxIdx) return;
+      const statusLower = clean(cols[idxStatus]).toLowerCase();
+      if (statusLower !== "ready" && statusLower !== "investigation") return;
+
+      const dateObj = parseLooseDate(cols[idxDate]);
+      const dateKey = dateObj ? formatDMY(dateObj) : "Unknown Date";
+      const diffDays = dateObj ? Math.ceil((today - dateObj) / 86400000) : "-";
+      const isOver21 = typeof diffDays === "number" && diffDays > 21;
+
+      summaryMap[dateKey] ||= { date: dateKey, ready: 0, investigation: 0 };
+      summaryMap[dateKey][statusLower]++;
+      state.actList.push({
+        policyNo: clean(cols[idxPolicy]),
+        daysDiff: diffDays,
+        remark: isOver21 ? "Over 21 Days" : ""
+      });
+    });
+
+    state.actSummary = Object.values(summaryMap);
+    renderActimize();
+    const hasData = state.actSummary.length > 0 || state.actList.length > 0;
+    document.getElementById("copyActimize").disabled = !hasData;
+    document.getElementById("exportActimize").disabled = !hasData;
+    setStatus("actStatus", hasData ? `${state.actList.length} policy item(s).` : "No Ready or Investigation rows found.");
+  });
+
+  document.getElementById("copyActimize").addEventListener("click", async () => {
+    await copyText(getActimizeCombined("\t"), "Actimize report copied.");
+    setStatus("actStatus", "Copied.");
+  });
+
+  document.getElementById("exportActimize").addEventListener("click", () => {
+    downloadText(`Full_Report_${timestamp()}.csv`, "\uFEFF" + getActimizeCombined(","));
+  });
+}
+
+function renderActimize() {
+  const result = document.getElementById("actResult");
+  result.innerHTML = `
+    <div class="report-card">
+      <h4>Part A: Daily Summary</h4>
+      <div class="table-wrap" id="actSummaryTable"></div>
+    </div>
+    <div class="report-card">
+      <h4>Part B: Policy List</h4>
+      <div class="table-wrap" id="actListTable"></div>
+    </div>
+  `;
+  renderTable("actSummaryTable", columns.actSummary, state.actSummary.map((row) => [
+    row.date, row.ready, row.investigation
+  ]));
+  renderTable("actListTable", columns.actList, state.actList.map((row) => [
+    row.policyNo,
+    row.daysDiff,
+    row.remark ? `<span class="warning-text">${escapeHTML(row.remark)}</span>` : ""
+  ]));
+}
+
+function getActimizeCombined(separator) {
+  let text = `Part A: Daily Summary${separator}${separator}\n`;
+  text += `${columns.actSummary.join(separator)}\n`;
+  state.actSummary.forEach((row) => {
+    text += [row.date, row.ready, row.investigation].join(separator) + "\n";
+  });
+  text += "\n";
+  text += `Part B: Policy List${separator}${separator}\n`;
+  text += `${columns.actList.join(separator)}\n`;
+  state.actList.forEach((row) => {
+    text += [row.policyNo, row.daysDiff, row.remark].join(separator) + "\n";
+  });
+  return text;
+}
+
+function getHrcRowClass(item) {
+  const hasTrust = item.comment.includes("Trust");
+  const hasG05 = item.reason.includes("G05");
+  const hasG07 = item.reason.includes("G07");
+  const isEverest = item.broker.includes("Everest");
+  if (isEverest && item.riskLevel > 2) return "row-red";
+  if (hasTrust && !hasG05) return "row-yellow";
+  if (isEverest && !hasG07) return "row-green";
+  return "";
+}
+
+function renderTable(targetId, headers, rows) {
+  const normalizedRows = rows.map((row) => Array.isArray(row) ? { cells: row, className: "" } : row);
+  const headerHTML = headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("");
+  const bodyHTML = normalizedRows.length
+    ? normalizedRows.map((row) => {
+      const cells = row.cells.map((cell) => `<td>${isSafeHTML(cell) ? cell : escapeHTML(cell)}</td>`).join("");
+      return `<tr class="${row.className || ""}">${cells}</tr>`;
+    }).join("")
+    : `<tr><td colspan="${headers.length}">No records yet.</td></tr>`;
+  document.getElementById(targetId).innerHTML = `<table><thead><tr>${headerHTML}</tr></thead><tbody>${bodyHTML}</tbody></table>`;
+}
+
+function exportCSV(name, headers, rows) {
+  if (!rows.length) return;
+  const csvRows = [headers, ...rows].map((row) => row.map(csvEscape).join(","));
+  downloadText(`${name}_${timestamp()}.csv`, "\uFEFF" + csvRows.join("\n"));
+}
+
+function downloadText(filename, content) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+async function copyText(text, message) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast(message);
+  } catch {
+    showToast("Copy failed. Select the text manually.");
+  }
+}
+
+function resetActiveTool() {
+  const active = document.querySelector(".tool-panel.active");
+  active?.querySelectorAll("textarea").forEach((item) => { item.value = ""; });
+  active?.querySelectorAll(".status-text").forEach((item) => { item.textContent = ""; });
+  if (active?.id === "tool-edd") {
+    state.edd = [];
+    document.getElementById("eddResult").innerHTML = "";
+    document.getElementById("exportEdd").disabled = true;
+  }
+  if (active?.id === "tool-hrc") {
+    state.hrc = [];
+    document.getElementById("hrcResult").innerHTML = "";
+    document.getElementById("exportHrc").disabled = true;
+  }
+  if (active?.id === "tool-actimize") {
+    state.actSummary = [];
+    state.actList = [];
+    document.getElementById("actResult").innerHTML = "";
+    document.getElementById("copyActimize").disabled = true;
+    document.getElementById("exportActimize").disabled = true;
+  }
+}
+
+function parseDMY(dateStr) {
+  if (!dateStr || typeof dateStr !== "string") return null;
+  const parts = dateStr.trim().split("/");
+  if (parts.length !== 3) return null;
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const year = parseInt(parts[2], 10);
+  const date = new Date(year, month, day);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function parseLooseDate(dateStr) {
+  if (!dateStr) return null;
+  const cleaned = dateStr.trim();
+  const match = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (match) {
+    const date = new Date(parseInt(match[3], 10), parseInt(match[2], 10) - 1, parseInt(match[1], 10));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const fallback = new Date(cleaned);
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
+}
+
+function excelToArray(text) {
+  if (!text.trim()) return [];
+  return text.replace(/\r/g, "").replace(/\n$/, "").split("\n").map((row) => row.split("\t"));
+}
+
+function excelColToIndex(colName) {
+  const col = clean(colName).toUpperCase();
+  let result = 0;
+  for (let i = 0; i < col.length; i++) {
+    const code = col.charCodeAt(i) - 64;
+    if (code < 1 || code > 26) return 0;
+    result = result * 26 + code;
+  }
+  return result - 1;
+}
+
+function formatDMY(date) {
+  return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
+}
+
+function csvEscape(value) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+function clean(value) {
+  return String(value ?? "").trim();
+}
+
+function escapeHTML(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function isSafeHTML(value) {
+  return typeof value === "string" && /^<span class="(pill yes|pill no|warning-text)">/.test(value);
+}
+
+function pill(text, tone) {
+  return `<span class="pill ${tone}">${escapeHTML(text)}</span>`;
+}
+
+function timestamp() {
+  return new Date().toISOString().slice(0, 19).replace(/[-T:]/g, "");
+}
+
+function setStatus(id, message) {
+  document.getElementById(id).textContent = message;
+}
+
+function showToast(message) {
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.classList.add("show");
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toast.classList.remove("show"), 2400);
+}
