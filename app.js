@@ -1,5 +1,6 @@
-const APP_VERSION = "2.2.0";
+const APP_VERSION = "2.3.0";
 const HRC_DISPLAY_LIMIT = 500;
+const DASHBOARD_PAGE_SIZE = 10;
 
 const state = {
   dashboard: null,
@@ -73,6 +74,7 @@ function bindDashboardTool() {
 
     state.dashboard = {
       rows: filteredRows,
+      page: 1,
       sourceCount: joinedRows.length,
       filters,
       shownCount: filteredRows.length,
@@ -95,6 +97,13 @@ function bindDashboardTool() {
     const removeButton = event.target.closest("[data-remove-filter]");
     if (!removeButton) return;
     removeButton.closest(".filter-row").remove();
+  });
+
+  document.getElementById("dashResult").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-dash-page]");
+    if (!button || !state.dashboard) return;
+    state.dashboard.page = Number(button.dataset.dashPage);
+    renderDashboardTable(state.dashboard.rows);
   });
 
   document.getElementById("copyDashboard").addEventListener("click", async () => {
@@ -323,7 +332,12 @@ function buildDashboardPolicyRow(dailyRow, monthlyMap) {
 }
 
 function renderDashboardTable(rows) {
-  const body = rows.length ? rows.map((row) => {
+  const pageCount = Math.max(1, Math.ceil(rows.length / DASHBOARD_PAGE_SIZE));
+  const currentPage = Math.min(Math.max(state.dashboard?.page || 1, 1), pageCount);
+  if (state.dashboard) state.dashboard.page = currentPage;
+  const start = (currentPage - 1) * DASHBOARD_PAGE_SIZE;
+  const pageRows = rows.slice(start, start + DASHBOARD_PAGE_SIZE);
+  const body = pageRows.length ? pageRows.map((row) => {
     const cells = dashboardRowToArray(row).map((value, index) => {
       const key = columns.dashboard[index];
       const field = dashboardColumnField(key);
@@ -333,11 +347,21 @@ function renderDashboardTable(rows) {
     }).join("");
     return `<tr>${cells}</tr>`;
   }).join("") : `<tr><td colspan="${columns.dashboard.length}">No records yet.</td></tr>`;
+  const rangeStart = rows.length ? start + 1 : 0;
+  const rangeEnd = Math.min(start + DASHBOARD_PAGE_SIZE, rows.length);
   document.getElementById("dashResult").innerHTML = `
     <table>
       <thead><tr>${columns.dashboard.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}</tr></thead>
       <tbody>${body}</tbody>
     </table>
+    <div class="pagination-bar">
+      <span>Showing ${formatInteger(rangeStart)}-${formatInteger(rangeEnd)} of ${formatInteger(rows.length)}</span>
+      <div class="pagination-actions">
+        <button class="ghost-button" data-dash-page="${currentPage - 1}" type="button" ${currentPage <= 1 ? "disabled" : ""}>Prev</button>
+        <span>Page ${formatInteger(currentPage)} / ${formatInteger(pageCount)}</span>
+        <button class="ghost-button" data-dash-page="${currentPage + 1}" type="button" ${currentPage >= pageCount ? "disabled" : ""}>Next</button>
+      </div>
+    </div>
   `;
 }
 

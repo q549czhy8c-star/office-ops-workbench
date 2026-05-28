@@ -503,6 +503,23 @@ button:disabled {
   font-weight: 800;
 }
 
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  background: #fbfcfc;
+  border-top: 1px solid var(--line);
+  font-weight: 800;
+}
+
+.pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .section-heading {
   display: flex;
   justify-content: space-between;
@@ -844,6 +861,12 @@ tr:last-child td {
   .topbar,
   .section-heading {
     display: grid;
+  }
+
+  .pagination-bar,
+  .pagination-actions {
+    display: grid;
+    justify-items: start;
   }
 
   .dashboard-grid,

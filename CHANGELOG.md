@@ -2,6 +2,12 @@
 
 All notable changes to Office Ops Workbench are recorded here. Version type is determined before each release using `scripts/version.mjs`.
 
+## [2.3.0] - 2026-05-28
+
+### Minor
+
+- Added Dashboard result pagination with 10 records per page while keeping copy and CSV export on all filtered records.
+
 ## [2.2.0] - 2026-05-28
 
 ### Minor
