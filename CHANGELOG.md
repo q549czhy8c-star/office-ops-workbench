@@ -2,6 +2,12 @@
 
 All notable changes to Office Ops Workbench are recorded here. Version type is determined before each release using `scripts/version.mjs`.
 
+## [2.2.0] - 2026-05-28
+
+### Minor
+
+- Synced Dashboard pie chart group options with the full Dashboard filter field list.
+
 ## [2.1.0] - 2026-05-28
 
 ### Minor

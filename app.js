@@ -1,4 +1,4 @@
-const APP_VERSION = "2.1.0";
+const APP_VERSION = "2.2.0";
 const HRC_DISPLAY_LIMIT = 500;
 
 const state = {
@@ -52,6 +52,7 @@ function showTool(tool) {
 }
 
 function bindDashboardTool() {
+  renderDashboardPieFieldOptions();
   renderDashboardFilters();
 
   document.getElementById("processDashboard").addEventListener("click", () => {
@@ -156,6 +157,15 @@ function getDashboardRows(inputId, headerIndexes, maxColumns) {
 function getDashboardPieFields() {
   const selected = Array.from(document.querySelectorAll(".dash-pie-field:checked")).map((input) => input.value);
   return selected.length ? selected : ["status"];
+}
+
+function renderDashboardPieFieldOptions() {
+  document.getElementById("dashPieFields").innerHTML = dashboardFilterFields().map((item) => `
+    <label>
+      <input class="dash-pie-field" type="checkbox" value="${item.key}" ${item.key === "status" ? "checked" : ""}>
+      ${item.label}
+    </label>
+  `).join("");
 }
 
 function renderDashboardFilters() {
