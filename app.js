@@ -1,4 +1,4 @@
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.1.0";
 const HRC_DISPLAY_LIMIT = 500;
 
 const state = {
@@ -55,8 +55,8 @@ function bindDashboardTool() {
   renderDashboardFilters();
 
   document.getElementById("processDashboard").addEventListener("click", () => {
-    const dailyRows = getDashboardRows("dashDailyInput", [0, 1, 3, 8, 12, 14]);
-    const monthlyRows = getDashboardRows("dashMonthlyInput", [0, 2, 3, 5, 6, 8]);
+    const dailyRows = getDashboardRows("dashDailyInput", [0, 1, 3, 8, 12, 14], 15);
+    const monthlyRows = getDashboardRows("dashMonthlyInput", [0, 2, 3, 5, 6, 8], 9);
 
     if (!dailyRows.length) {
       setStatus("dashStatus", "Paste Daily report data first.");
@@ -77,7 +77,7 @@ function bindDashboardTool() {
       shownCount: filteredRows.length,
       totalSum,
       missingCount,
-      pieField: document.getElementById("dashPieField").value
+      pieFields: getDashboardPieFields()
     };
 
     renderDashboard();
@@ -115,7 +115,7 @@ function bindDashboardTool() {
 }
 
 function renderDashboard() {
-  const { rows, sourceCount, shownCount, totalSum, missingCount, pieField } = state.dashboard;
+  const { rows, sourceCount, shownCount, totalSum, missingCount, pieFields } = state.dashboard;
   document.getElementById("dashMetrics").innerHTML = `
     <article class="stat-card compact-stat">
       <span class="stat-value">${formatInteger(shownCount)}</span>
@@ -132,7 +132,7 @@ function renderDashboard() {
   `;
 
   renderDashboardTable(rows);
-  renderPieChart(summarizeDashboardPie(rows, pieField), pieField);
+  renderPieChart(summarizeDashboardPie(rows, pieFields), pieFields);
   if (!rows.length && sourceCount) {
     document.getElementById("dashResult").innerHTML = `<div class="empty-state">No rows matched the selected filters.</div>`;
   }
@@ -145,10 +145,17 @@ function getDashboardSummary(separator) {
   ].join("\n");
 }
 
-function getDashboardRows(inputId, headerIndexes) {
-  const rows = excelToArray(document.getElementById(inputId).value).filter((row) => row.some((cell) => clean(cell)));
+function getDashboardRows(inputId, headerIndexes, maxColumns) {
+  const rows = excelToArray(document.getElementById(inputId).value)
+    .map((row) => row.slice(0, maxColumns))
+    .filter((row) => row.some((cell) => clean(cell)));
   if (!rows.length) return [];
   return detectHeaderRow(rows, headerIndexes.filter((index) => index >= 0)) ? rows.slice(1) : rows;
+}
+
+function getDashboardPieFields() {
+  const selected = Array.from(document.querySelectorAll(".dash-pie-field:checked")).map((input) => input.value);
+  return selected.length ? selected : ["status"];
 }
 
 function renderDashboardFilters() {
@@ -157,7 +164,7 @@ function renderDashboardFilters() {
   addDashboardFilter("status", "not-empty", "");
 }
 
-function addDashboardFilter(field = "status", operator = "contains", value = "") {
+function addDashboardFilter(field = "status", operator = "contains", value = "", valueTo = "") {
   const container = document.getElementById("dashFilters");
   const row = document.createElement("div");
   row.className = "filter-row";
@@ -169,15 +176,19 @@ function addDashboardFilter(field = "status", operator = "contains", value = "")
       <option value="contains">Contains</option>
       <option value="equals">Equals</option>
       <option value="not-equals">Not equals</option>
+      <option value="between">Between</option>
+      <option value="not-between">Not between</option>
       <option value="empty">Missing / empty</option>
       <option value="not-empty">Not empty</option>
     </select>
-    <input class="filter-value" type="text" placeholder="Value">
+    <input class="filter-value" type="text" placeholder="Value / from">
+    <input class="filter-value-to" type="text" placeholder="To">
     <button class="ghost-button" data-remove-filter type="button">Delete</button>
   `;
   row.querySelector(".filter-field").value = field;
   row.querySelector(".filter-operator").value = operator;
   row.querySelector(".filter-value").value = value;
+  row.querySelector(".filter-value-to").value = valueTo;
   container.appendChild(row);
 }
 
@@ -202,8 +213,13 @@ function getDashboardFilters() {
   return Array.from(document.querySelectorAll("#dashFilters .filter-row")).map((row) => ({
     field: row.querySelector(".filter-field").value,
     operator: row.querySelector(".filter-operator").value,
-    value: clean(row.querySelector(".filter-value").value)
-  })).filter((filter) => filter.operator === "empty" || filter.operator === "not-empty" || filter.value);
+    value: clean(row.querySelector(".filter-value").value),
+    valueTo: clean(row.querySelector(".filter-value-to").value)
+  })).filter((filter) => {
+    if (filter.operator === "empty" || filter.operator === "not-empty") return true;
+    if (filter.operator === "between" || filter.operator === "not-between") return filter.value || filter.valueTo;
+    return filter.value;
+  });
 }
 
 function applyDashboardFilters(rows, filters) {
@@ -218,9 +234,37 @@ function matchesDashboardFilter(row, filter) {
   if (filter.operator === "contains") return value.includes(target);
   if (filter.operator === "equals") return value === target;
   if (filter.operator === "not-equals") return value !== target;
+  if (filter.operator === "between" || filter.operator === "not-between") {
+    const inRange = isDashboardValueInRange(filter.field, rawValue, filter.value, filter.valueTo);
+    return filter.operator === "between" ? inRange : !inRange;
+  }
   if (filter.operator === "empty") return !clean(rawValue);
   if (filter.operator === "not-empty") return !!clean(rawValue);
   return true;
+}
+
+function isDashboardValueInRange(field, value, from, to) {
+  const comparable = getDashboardComparable(field, value);
+  const lower = getDashboardComparable(field, from);
+  const upper = getDashboardComparable(field, to);
+  if (comparable === null) return false;
+  if (lower !== null && comparable < lower) return false;
+  if (upper !== null && comparable > upper) return false;
+  return true;
+}
+
+function getDashboardComparable(field, value) {
+  const cleaned = clean(value);
+  if (!cleaned) return null;
+  if (field === "sumAssured" || field === "modalPremium") {
+    const amount = parseAmount(cleaned);
+    return Number.isFinite(amount) ? amount : null;
+  }
+  if (field === "submissionDate" || field === "issueDate" || field === "riskCommencementDate") {
+    const date = parseLooseDate(cleaned);
+    return date ? date.getTime() : cleaned.toLowerCase();
+  }
+  return cleaned.toLowerCase();
 }
 
 function extractMonthlyRow(row) {
@@ -320,16 +364,16 @@ function dashboardColumnField(label) {
   }[label];
 }
 
-function summarizeDashboardPie(rows, field) {
+function summarizeDashboardPie(rows, fields) {
   const map = new Map();
   rows.forEach((row) => {
-    const key = clean(row[field]) || "(blank)";
+    const key = fields.map((field) => clean(row[field]) || "(blank)").join(" / ");
     map.set(key, (map.get(key) || 0) + 1);
   });
   return Array.from(map.entries()).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
 }
 
-function renderPieChart(slicesInput, pieField) {
+function renderPieChart(slicesInput, pieFields) {
   const canvas = document.getElementById("dashPieChart");
   const legend = document.getElementById("dashChartLegend");
   const status = document.getElementById("dashChartStatus");
@@ -371,7 +415,8 @@ function renderPieChart(slicesInput, pieField) {
       <strong>${formatInteger(slice.value)}</strong>
     </div>
   `).join("");
-  status.textContent = `Grouped by ${dashboardFilterFields().find((field) => field.key === pieField)?.label || "selected field"}.`;
+  const fieldLabels = pieFields.map((field) => dashboardFilterFields().find((item) => item.key === field)?.label || field).join(" + ");
+  status.textContent = `Grouped by ${fieldLabels}.`;
 }
 
 function bindCommentTool() {
@@ -662,7 +707,7 @@ function resetActiveTool() {
       <article class="stat-card compact-stat"><span class="stat-value">0</span><span class="stat-label">Missing lookup / values</span></article>
     `;
     renderDashboardFilters();
-    renderPieChart([], "status");
+    renderPieChart([], ["status"]);
   }
   if (active?.id === "tool-edd") {
     state.edd = [];

@@ -1,6 +1,6 @@
 {
   "name": "office-ops-workbench",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": false,
   "description": "Unified local web app for office document utilities, Excel data processing and dashboard reporting.",
   "scripts": {

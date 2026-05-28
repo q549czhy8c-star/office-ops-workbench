@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Office Ops Workbench</title>
-  <link rel="stylesheet" href="styles.css?v=2.0.0">
+  <link rel="stylesheet" href="styles.css?v=2.1.0">
 </head>
 <body>
   <div class="app-shell">
@@ -88,16 +88,14 @@
               <div class="filter-list" id="dashFilters"></div>
             </div>
 
-            <label class="field compact chart-field">
-              <span>Pie chart by</span>
-              <select id="dashPieField">
-                <option value="status">Status</option>
-                <option value="brokerName">Broker name</option>
-                <option value="planName">Plan name</option>
-                <option value="currency">Policy currency</option>
-                <option value="paymentMode">Payment mode</option>
-              </select>
-            </label>
+            <fieldset class="chart-field">
+              <legend>Pie chart groups</legend>
+              <label><input class="dash-pie-field" type="checkbox" value="status" checked> Status</label>
+              <label><input class="dash-pie-field" type="checkbox" value="brokerName"> Broker name</label>
+              <label><input class="dash-pie-field" type="checkbox" value="planName"> Plan name</label>
+              <label><input class="dash-pie-field" type="checkbox" value="currency"> Policy currency</label>
+              <label><input class="dash-pie-field" type="checkbox" value="paymentMode"> Payment mode</label>
+            </fieldset>
 
             <div class="action-row">
               <button class="primary-button" id="processDashboard" type="button">Build Dashboard</button>
@@ -290,6 +288,6 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=2.0.0"></script>
+  <script src="app.js?v=2.1.0"></script>
 </body>
 </html>

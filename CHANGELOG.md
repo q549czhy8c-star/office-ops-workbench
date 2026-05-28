@@ -2,6 +2,14 @@
 
 All notable changes to Office Ops Workbench are recorded here. Version type is determined before each release using `scripts/version.mjs`.
 
+## [2.1.0] - 2026-05-28
+
+### Minor
+
+- Limited Dashboard Daily and Monthly pasted rows to the required report columns even when pasted data has extra columns.
+- Added range filter operators for Dashboard filters.
+- Added multi-field pie chart grouping based on the currently filtered Dashboard records.
+
 ## [2.0.0] - 2026-05-27
 
 ### Major
