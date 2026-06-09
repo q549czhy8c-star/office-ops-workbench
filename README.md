@@ -54,4 +54,4 @@ The helper script automatically classifies the requested update as major or mino
 
 ## Current Version
 
-`2.4.0`
+`2.5.0`

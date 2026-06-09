@@ -1,4 +1,4 @@
-const APP_VERSION = "2.4.0";
+const APP_VERSION = "2.5.0";
 const HRC_DISPLAY_LIMIT = 500;
 const DASHBOARD_PAGE_SIZE = 10;
 
@@ -773,9 +773,9 @@ function getActimizeListTableText() {
 
 function getActimizeSummaryEmailHTML() {
   return `
-    <div>
+    <div style="color:#18231f;font-family:Arial,sans-serif;font-size:14px;">
       <p>Hi all,</p>
-      <p>Please find NBUW status as of <mark>${formatMonthDay()}</mark> fyi:</p>
+      <p>Please find NBUW status as of <mark style="background:#50ff43;color:#18231f;padding:0 2px;">${formatMonthDay()}</mark> fyi:</p>
       <p>Summary</p>
       ${getActimizeSummaryTableHTML()}
       <p>${state.actOverdueAlertCount} alerts (involves ${state.actList.length} pols) pending for broker memo</p>
@@ -786,9 +786,9 @@ function getActimizeSummaryEmailHTML() {
 
 function getActimizeBrokerEmailHTML() {
   return `
-    <div>
+    <div style="color:#18231f;font-family:Arial,sans-serif;font-size:14px;">
       <p>Dear Eva,</p>
-      <p>Please note that as of <mark>${formatMonthDayYear()}</mark>, NBUW have ${state.actOverdueAlertCount} unclosed overdue alerts (involves ${state.actList.length} pols) still pending for broker memo.</p>
+      <p>Please note that as of <mark style="background:#50ff43;color:#18231f;padding:0 2px;">${formatMonthDayYear()}</mark>, NBUW have ${state.actOverdueAlertCount} unclosed overdue alerts (involves ${state.actList.length} pols) still pending for broker memo.</p>
       ${getActimizeListTableHTML()}
       <p>Thanks.<br>Keith</p>
     </div>
@@ -796,23 +796,35 @@ function getActimizeBrokerEmailHTML() {
 }
 
 function getActimizeSummaryTableHTML() {
-  const body = state.actSummary.map((row) => `<tr><td>${escapeHTML(row.date)}</td><td>${row.ready}</td><td>${row.investigation}</td></tr>`).join("");
+  const body = state.actSummary.map((row) => `<tr><td style="${emailCellStyle()}">${escapeHTML(row.date)}</td><td style="${emailCellStyle("right")}">${row.ready}</td><td style="${emailCellStyle("right")}">${row.investigation}</td></tr>`).join("");
   return `
-    <table class="email-table">
-      <thead><tr><th>Date</th><th>Ready Count</th><th>Investigation Count</th></tr></thead>
-      <tbody>${body}<tr class="email-total"><td>Total</td><td>${sumActReady()}</td><td>${sumActInvestigation()}</td></tr></tbody>
+    <table class="email-table" style="${emailTableStyle()}">
+      <thead><tr><th style="${emailHeaderStyle()}">Date</th><th style="${emailHeaderStyle()}">Ready Count</th><th style="${emailHeaderStyle()}">Investigation Count</th></tr></thead>
+      <tbody>${body}<tr><td style="${emailCellStyle()}">Total</td><td style="${emailCellStyle("right")};background:#ffff00;">${sumActReady()}</td><td style="${emailCellStyle("right")};background:#ffff00;">${sumActInvestigation()}</td></tr></tbody>
     </table>
   `;
 }
 
 function getActimizeListTableHTML() {
-  const body = state.actList.map((row) => `<tr><td>${escapeHTML(row.policyNo)}</td><td>${escapeHTML(row.daysDiff)}</td><td>${escapeHTML(row.remark)}</td></tr>`).join("");
+  const body = state.actList.map((row) => `<tr><td style="${emailCellStyle()}">${escapeHTML(row.policyNo)}</td><td style="${emailCellStyle("right")}">${escapeHTML(row.daysDiff)}</td><td style="${emailCellStyle()}">${escapeHTML(row.remark)}</td></tr>`).join("");
   return `
-    <table class="email-table">
-      <thead><tr><th>Policy No.</th><th>Days Diff</th><th>Remark</th></tr></thead>
+    <table class="email-table" style="${emailTableStyle()}">
+      <thead><tr><th style="${emailHeaderStyle()}">Policy No.</th><th style="${emailHeaderStyle()}">Days Diff</th><th style="${emailHeaderStyle()}">Remark</th></tr></thead>
       <tbody>${body}</tbody>
     </table>
   `;
+}
+
+function emailTableStyle() {
+  return "width:auto;min-width:360px;margin:4px 0 18px;border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px;";
+}
+
+function emailHeaderStyle() {
+  return `${emailCellStyle()};background:#c9eef7;color:#17211f;font-weight:700;`;
+}
+
+function emailCellStyle(align = "left") {
+  return `padding:4px 8px;border:1px solid #17211f;text-align:${align};`;
 }
 
 function sumActReady() {
@@ -871,6 +883,8 @@ async function copyText(text, message) {
 }
 
 async function copyRichHTML(html, text, message) {
+  if (copyRenderedHTML(html, message)) return;
+
   try {
     if (navigator.clipboard.write && window.ClipboardItem) {
       await navigator.clipboard.write([
@@ -886,6 +900,33 @@ async function copyRichHTML(html, text, message) {
   } catch {
     await copyText(text, message);
   }
+}
+
+function copyRenderedHTML(html, message) {
+  const container = document.createElement("div");
+  container.className = "clipboard-email-fragment";
+  container.setAttribute("contenteditable", "true");
+  container.innerHTML = html;
+  document.body.appendChild(container);
+
+  const selection = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(container);
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch {
+    copied = false;
+  }
+
+  selection.removeAllRanges();
+  container.remove();
+
+  if (copied) showToast(message);
+  return copied;
 }
 
 function resetActiveTool() {

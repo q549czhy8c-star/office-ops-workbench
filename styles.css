@@ -845,6 +845,18 @@ tr:last-child td {
   background: #ffff00;
 }
 
+.clipboard-email-fragment {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 760px;
+  padding: 12px;
+  color: #18231f;
+  background: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+
 .toast {
   position: fixed;
   right: 22px;

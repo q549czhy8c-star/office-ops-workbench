@@ -2,6 +2,12 @@
 
 All notable changes to Office Ops Workbench are recorded here. Version type is determined before each release using `scripts/version.mjs`.
 
+## [2.5.0] - 2026-06-09
+
+### Minor
+
+- Improved NiceActimize email template copying so formatted tables, borders and highlighted dates are copied as rendered HTML before falling back to plain text.
+
 ## [2.4.0] - 2026-06-09
 
 ### Minor
