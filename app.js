@@ -1,4 +1,4 @@
-const APP_VERSION = "2.3.0";
+const APP_VERSION = "2.4.0";
 const HRC_DISPLAY_LIMIT = 500;
 const DASHBOARD_PAGE_SIZE = 10;
 
@@ -7,7 +7,8 @@ const state = {
   edd: [],
   hrc: [],
   actSummary: [],
-  actList: []
+  actList: [],
+  actOverdueAlertCount: 0
 };
 
 const columns = {
@@ -17,7 +18,7 @@ const columns = {
   ],
   edd: ["Policy Number", "Policyholder", "Nationality", "Broker", "High Risk Ind", "Risk Level", "Comment", "Reason", "In Table 3"],
   hrc: ["Policy No", "Issue Date", "Reason", "Comment", "Risk Level", "Broker", "Policyholder", "Nationality", "High Risk Ind"],
-  actSummary: ["Date", "Ready Count", "Investigation Count"],
+  actSummary: ["Date", "Ready Count", "Investigation Count", "Total"],
   actList: ["Policy No.", "Days Diff", "Remark"]
 };
 
@@ -597,7 +598,7 @@ function bindActimizeTool() {
     const summaryMap = {};
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    state.actList = [];
+    const actItems = [];
 
     document.getElementById("actInput").value.split("\n").forEach((row) => {
       if (!row.trim()) return;
@@ -613,19 +614,24 @@ function bindActimizeTool() {
 
       summaryMap[dateKey] ||= { date: dateKey, ready: 0, investigation: 0 };
       summaryMap[dateKey][statusLower]++;
-      state.actList.push({
+      actItems.push({
         policyNo: extractPolicyNumber(cols[idxPolicy]),
         daysDiff: diffDays,
-        remark: isOver21 ? "Over 21 Days" : ""
+        remark: isOver21 ? "Over 21 Days" : "",
+        isOver21
       });
     });
 
-    state.actSummary = Object.values(summaryMap);
+    state.actSummary = Object.values(summaryMap).sort((a, b) => parseSummaryDate(b.date) - parseSummaryDate(a.date));
+    state.actOverdueAlertCount = actItems.filter((item) => item.isOver21).length;
+    state.actList = dedupeOverduePolicies(actItems);
     renderActimize();
     const hasData = state.actSummary.length > 0 || state.actList.length > 0;
     document.getElementById("copyActimize").disabled = !hasData;
     document.getElementById("exportActimize").disabled = !hasData;
-    setStatus("actStatus", hasData ? `${state.actList.length} policy item(s).` : "No Ready or Investigation rows found.");
+    document.getElementById("copyActSummaryEmail").disabled = !hasData;
+    document.getElementById("copyActBrokerEmail").disabled = !hasData;
+    setStatus("actStatus", hasData ? `${state.actOverdueAlertCount} overdue alert(s), ${state.actList.length} unique policy item(s).` : "No Ready or Investigation rows found.");
   });
 
   document.getElementById("copyActimize").addEventListener("click", async () => {
@@ -635,6 +641,15 @@ function bindActimizeTool() {
 
   document.getElementById("exportActimize").addEventListener("click", () => {
     downloadText(`Full_Report_${timestamp()}.csv`, "\uFEFF" + getActimizeCombined(","));
+  });
+
+  document.getElementById("actResult").addEventListener("click", async (event) => {
+    if (event.target.closest("#copyActSummaryEmail")) {
+      await copyRichHTML(getActimizeSummaryEmailHTML(), getActimizeSummaryEmailText(), "Summary email copied.");
+    }
+    if (event.target.closest("#copyActBrokerEmail")) {
+      await copyRichHTML(getActimizeBrokerEmailHTML(), getActimizeBrokerEmailText(), "Broker memo email copied.");
+    }
   });
 }
 
@@ -649,9 +664,17 @@ function renderActimize() {
       <h4>Part B: Policy List</h4>
       <div class="table-wrap" id="actListTable"></div>
     </div>
+    <div class="report-card email-template-card">
+      <h4>Email Templates</h4>
+      <div class="action-row">
+        <button class="secondary-button" id="copyActSummaryEmail" type="button">Copy Summary Email</button>
+        <button class="secondary-button" id="copyActBrokerEmail" type="button">Copy Broker Memo Email</button>
+      </div>
+      <div class="email-preview" id="actEmailPreview">${getActimizeSummaryEmailHTML()}</div>
+    </div>
   `;
   renderTable("actSummaryTable", columns.actSummary, state.actSummary.map((row) => [
-    row.date, row.ready, row.investigation
+    row.date, row.ready, row.investigation, row.ready + row.investigation
   ]));
   renderTable("actListTable", columns.actList, state.actList.map((row) => [
     row.policyNo,
@@ -663,9 +686,13 @@ function renderActimize() {
 function getActimizeCombined(separator) {
   let text = `Part A: Daily Summary${separator}${separator}\n`;
   text += `${columns.actSummary.join(separator)}\n`;
-  state.actSummary.forEach((row) => {
-    text += [row.date, row.ready, row.investigation].join(separator) + "\n";
+  state.actSummary.forEach((row, index) => {
+    const excelRow = index + 3;
+    text += [row.date, row.ready, row.investigation, `=B${excelRow}+C${excelRow}`].join(separator) + "\n";
   });
+  const totalRow = state.actSummary.length + 3;
+  const lastDataRow = Math.max(3, totalRow - 1);
+  text += ["Total", `=SUM(B3:B${lastDataRow})`, `=SUM(C3:C${lastDataRow})`, `=SUM(D3:D${lastDataRow})`].join(separator) + "\n";
   text += "\n";
   text += `Part B: Policy List${separator}${separator}\n`;
   text += `${columns.actList.join(separator)}\n`;
@@ -677,6 +704,123 @@ function getActimizeCombined(separator) {
 
 function extractPolicyNumber(text) {
   return clean(text).substring(9, 17);
+}
+
+function dedupeOverduePolicies(items) {
+  const map = new Map();
+  items.filter((item) => item.isOver21).forEach((item, index) => {
+    const key = item.policyNo || `missing-policy-${index}`;
+    const existing = map.get(key);
+    if (!existing || Number(item.daysDiff) > Number(existing.daysDiff)) {
+      map.set(key, { policyNo: item.policyNo, daysDiff: item.daysDiff, remark: "Over 21 Days" });
+    }
+  });
+  return Array.from(map.values()).sort((a, b) => Number(b.daysDiff) - Number(a.daysDiff));
+}
+
+function parseSummaryDate(value) {
+  const date = parseLooseDate(value);
+  return date ? date.getTime() : 0;
+}
+
+function formatMonthDay(date = new Date()) {
+  return date.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+}
+
+function formatMonthDayYear(date = new Date()) {
+  return `${formatMonthDay(date)} ${date.getFullYear()}`;
+}
+
+function getActimizeSummaryEmailText() {
+  return [
+    "Hi all,",
+    "",
+    `Please find NBUW status as of ${formatMonthDay()} fyi:`,
+    "",
+    "Summary",
+    getActimizeSummaryTableText(),
+    "",
+    `${state.actOverdueAlertCount} alerts (involves ${state.actList.length} pols) pending for broker memo`,
+    getActimizeListTableText()
+  ].join("\n");
+}
+
+function getActimizeBrokerEmailText() {
+  return [
+    "Dear Eva,",
+    "",
+    `Please note that as of ${formatMonthDayYear()}, NBUW have ${state.actOverdueAlertCount} unclosed overdue alerts (involves ${state.actList.length} pols) still pending for broker memo.`,
+    "",
+    getActimizeListTableText(),
+    "",
+    "Thanks.",
+    "Keith"
+  ].join("\n");
+}
+
+function getActimizeSummaryTableText() {
+  const rows = [["Date", "Ready Count", "Investigation Count"]];
+  state.actSummary.forEach((row) => rows.push([row.date, row.ready, row.investigation]));
+  rows.push(["Total", sumActReady(), sumActInvestigation()]);
+  return rows.map((row) => row.join("\t")).join("\n");
+}
+
+function getActimizeListTableText() {
+  const rows = [["Policy No.", "Days Diff", "Remark"]];
+  state.actList.forEach((row) => rows.push([row.policyNo, row.daysDiff, row.remark]));
+  return rows.map((row) => row.join("\t")).join("\n");
+}
+
+function getActimizeSummaryEmailHTML() {
+  return `
+    <div>
+      <p>Hi all,</p>
+      <p>Please find NBUW status as of <mark>${formatMonthDay()}</mark> fyi:</p>
+      <p>Summary</p>
+      ${getActimizeSummaryTableHTML()}
+      <p>${state.actOverdueAlertCount} alerts (involves ${state.actList.length} pols) pending for broker memo</p>
+      ${getActimizeListTableHTML()}
+    </div>
+  `;
+}
+
+function getActimizeBrokerEmailHTML() {
+  return `
+    <div>
+      <p>Dear Eva,</p>
+      <p>Please note that as of <mark>${formatMonthDayYear()}</mark>, NBUW have ${state.actOverdueAlertCount} unclosed overdue alerts (involves ${state.actList.length} pols) still pending for broker memo.</p>
+      ${getActimizeListTableHTML()}
+      <p>Thanks.<br>Keith</p>
+    </div>
+  `;
+}
+
+function getActimizeSummaryTableHTML() {
+  const body = state.actSummary.map((row) => `<tr><td>${escapeHTML(row.date)}</td><td>${row.ready}</td><td>${row.investigation}</td></tr>`).join("");
+  return `
+    <table class="email-table">
+      <thead><tr><th>Date</th><th>Ready Count</th><th>Investigation Count</th></tr></thead>
+      <tbody>${body}<tr class="email-total"><td>Total</td><td>${sumActReady()}</td><td>${sumActInvestigation()}</td></tr></tbody>
+    </table>
+  `;
+}
+
+function getActimizeListTableHTML() {
+  const body = state.actList.map((row) => `<tr><td>${escapeHTML(row.policyNo)}</td><td>${escapeHTML(row.daysDiff)}</td><td>${escapeHTML(row.remark)}</td></tr>`).join("");
+  return `
+    <table class="email-table">
+      <thead><tr><th>Policy No.</th><th>Days Diff</th><th>Remark</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  `;
+}
+
+function sumActReady() {
+  return state.actSummary.reduce((sum, row) => sum + row.ready, 0);
+}
+
+function sumActInvestigation() {
+  return state.actSummary.reduce((sum, row) => sum + row.investigation, 0);
 }
 
 function getHrcRowClass(item) {
@@ -726,6 +870,24 @@ async function copyText(text, message) {
   }
 }
 
+async function copyRichHTML(html, text, message) {
+  try {
+    if (navigator.clipboard.write && window.ClipboardItem) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([text], { type: "text/plain" })
+        })
+      ]);
+    } else {
+      await navigator.clipboard.writeText(text);
+    }
+    showToast(message);
+  } catch {
+    await copyText(text, message);
+  }
+}
+
 function resetActiveTool() {
   const active = document.querySelector(".tool-panel.active");
   active?.querySelectorAll("textarea").forEach((item) => { item.value = ""; });
@@ -756,6 +918,7 @@ function resetActiveTool() {
   if (active?.id === "tool-actimize") {
     state.actSummary = [];
     state.actList = [];
+    state.actOverdueAlertCount = 0;
     document.getElementById("actResult").innerHTML = "";
     document.getElementById("copyActimize").disabled = true;
     document.getElementById("exportActimize").disabled = true;

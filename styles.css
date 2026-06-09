@@ -792,6 +792,59 @@ tr:last-child td {
   margin: 0 0 10px;
 }
 
+.email-template-card {
+  grid-column: 1 / -1;
+}
+
+.email-preview {
+  margin-top: 12px;
+  padding: 16px;
+  overflow-x: auto;
+  color: #18231f;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.email-preview p {
+  margin: 0 0 14px;
+}
+
+.email-preview mark {
+  padding: 0 2px;
+  color: inherit;
+  background: #50ff43;
+}
+
+.email-table {
+  width: auto;
+  min-width: 360px;
+  margin: 4px 0 18px;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.email-table th,
+.email-table td {
+  padding: 4px 8px;
+  border: 1px solid #17211f;
+  text-align: left;
+}
+
+.email-table th {
+  color: #17211f;
+  background: #c9eef7;
+}
+
+.email-table td:nth-child(2),
+.email-table td:nth-child(3) {
+  text-align: right;
+}
+
+.email-total td:not(:first-child) {
+  background: #ffff00;
+}
+
 .toast {
   position: fixed;
   right: 22px;

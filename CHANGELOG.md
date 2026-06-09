@@ -2,6 +2,14 @@
 
 All notable changes to Office Ops Workbench are recorded here. Version type is determined before each release using `scripts/version.mjs`.
 
+## [2.4.0] - 2026-06-09
+
+### Minor
+
+- Added NiceActimize Part A total formulas for Ready Count, Investigation Count and combined total in the copied/downloaded CSV output.
+- Changed NiceActimize Part B CSV output to keep only unique policies that are over 21 days while retaining the full overdue alert count for reporting.
+- Added copy-ready NiceActimize summary and broker memo email templates with the current date highlighted.
+
 ## [2.3.0] - 2026-05-28
 
 ### Minor
