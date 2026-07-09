@@ -2,6 +2,14 @@
 
 All notable changes to Office Ops Workbench are recorded here. Version type is determined before each release using `scripts/version.mjs`.
 
+## [2.6.0] - 2026-07-09
+
+### Minor
+
+- Updated High Risk Client Extractor to separate policyholder fields from insured fields.
+- Added policyholder nationality from column V and insured high risk indicator, risk level, comment and reason from columns AQ, AS, AT and AU.
+- Changed High Risk Client filtering to include rows when either policyholder risk level or insured risk level is 2 or below, while preserving the Everest broker rule.
+
 ## [2.5.0] - 2026-06-09
 
 ### Minor

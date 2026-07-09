@@ -11,7 +11,7 @@ Open `index.html` directly in a browser. No server or install step is required.
 | Policy Dashboard | Combines Daily and Monthly reports by policy number, limits pasted rows to required columns, supports multi-filter rows with ranges, highlights missing lookups or values, charts filtered multi-group distribution, and exports CSV. | Lookup table, pie chart and CSV |
 | Comment Converter | Replaces lines containing only `Reply` with underline separators. | Copy-ready text |
 | NiceActimize Report | Builds Part A daily summary with Excel total formulas, Part B unique over-21-day policy ageing list, and copy-ready email templates from Ready / Investigation rows. Policy number is extracted with `MID(text,10,8)`. | Copy-ready report, email templates and CSV |
-| High Risk Client Extractor | Filters pasted AML policy data by issue date, risk level and Everest broker rules. Large results render a limited preview while CSV export keeps all rows. | Highlighted table preview and full CSV |
+| High Risk Client Extractor | Filters pasted AML policy data by issue date, policyholder/insured risk level and Everest broker rules. Extracts policyholder fields from F/V/AK/AL/AM/AN and insured fields from W/AQ/AS/AT/AU. Large results render a limited preview while CSV export keeps all rows. | Highlighted table preview and full CSV |
 | EDD Checking | Filters Table 1 by `DD/MM/YYYY` date range, joins policy details from Table 2, and checks Table 3 membership. | On-screen result and CSV |
 
 ## For Users
@@ -54,4 +54,4 @@ The helper script automatically classifies the requested update as major or mino
 
 ## Current Version
 
-`2.5.0`
+`2.6.0`

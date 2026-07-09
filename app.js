@@ -1,4 +1,4 @@
-const APP_VERSION = "2.5.0";
+const APP_VERSION = "2.6.0";
 const HRC_DISPLAY_LIMIT = 500;
 const DASHBOARD_PAGE_SIZE = 10;
 
@@ -17,7 +17,11 @@ const columns = {
     "Policy Currency", "Sum Assured", "Payment Mode", "Modal Premium", "Risk Commencement Date", "Missing Fields"
   ],
   edd: ["Policy Number", "Policyholder", "Nationality", "Broker", "High Risk Ind", "Risk Level", "Comment", "Reason", "In Table 3"],
-  hrc: ["Policy No", "Issue Date", "Reason", "Comment", "Risk Level", "Broker", "Policyholder", "Nationality", "High Risk Ind"],
+  hrc: [
+    "Policy No", "Issue Date", "Broker",
+    "Policyholder", "Policyholder Nationality", "Policyholder High Risk Ind", "Policyholder Risk Level", "Policyholder Comment", "Policyholder Reason",
+    "Insured", "Insured High Risk Ind", "Insured Risk Level", "Insured Comment", "Insured Reason"
+  ],
   actSummary: ["Date", "Ready Count", "Investigation Count", "Total"],
   actList: ["Policy No.", "Days Diff", "Remark"]
 };
@@ -540,21 +544,26 @@ function bindHrcTool() {
     const end = parseInt(document.getElementById("hrcEnd").value, 10) || 99999999;
 
     state.hrc = excelToArray(rawData).flatMap((cols) => {
-      if (cols.length < 41) return [];
+      if (cols.length < 13) return [];
       const item = {
-        policyNo: cols[1] || "",
-        issueDateRaw: cols[12] || "",
-        issueDateNum: parseInt(cols[12], 10),
-        reason: cols[39] || "",
-        comment: cols[38] || "",
-        riskLevel: parseInt(cols[37], 10) || 0,
-        broker: cols[26] || "",
-        policyholder: cols[5] || "",
-        nationality: cols[22] || "",
-        highRiskInd: cols[36] || ""
+        policyNo: getCell(cols, 1),
+        issueDateRaw: getCell(cols, 12),
+        issueDateNum: parseInt(getCell(cols, 12), 10),
+        broker: getCell(cols, 26),
+        policyholder: getCell(cols, 5),
+        policyholderNationality: getCell(cols, 21),
+        policyholderHighRiskInd: getCell(cols, 36),
+        policyholderRiskLevel: parseRiskLevel(getCell(cols, 37)),
+        policyholderComment: getCell(cols, 38),
+        policyholderReason: getCell(cols, 39),
+        insured: getCell(cols, 22),
+        insuredHighRiskInd: getCell(cols, 42),
+        insuredRiskLevel: parseRiskLevel(getCell(cols, 44)),
+        insuredComment: getCell(cols, 45),
+        insuredReason: getCell(cols, 46)
       };
       const inDateRange = item.issueDateNum >= start && item.issueDateNum <= end;
-      const isTargetRisk = item.riskLevel <= 2;
+      const isTargetRisk = item.policyholderRiskLevel <= 2 || item.insuredRiskLevel <= 2;
       const isEverest = item.broker.includes("Everest");
       return inDateRange && (isTargetRisk || isEverest) ? [item] : [];
     }).sort((a, b) => a.issueDateNum - b.issueDateNum);
@@ -566,13 +575,18 @@ function bindHrcTool() {
         cells: [
           item.policyNo,
           item.issueDateRaw,
-          item.reason,
-          item.comment,
-          item.riskLevel,
           item.broker,
           item.policyholder,
-          item.nationality,
-          item.highRiskInd
+          item.policyholderNationality,
+          item.policyholderHighRiskInd,
+          formatRiskLevel(item.policyholderRiskLevel),
+          item.policyholderComment,
+          item.policyholderReason,
+          item.insured,
+          item.insuredHighRiskInd,
+          formatRiskLevel(item.insuredRiskLevel),
+          item.insuredComment,
+          item.insuredReason
         ]
       };
     }));
@@ -583,8 +597,9 @@ function bindHrcTool() {
 
   document.getElementById("exportHrc").addEventListener("click", () => {
     exportCSV("Sorted_Policy_Report_2026", columns.hrc, state.hrc.map((row) => [
-      row.policyNo, row.issueDateRaw, row.reason, row.comment, row.riskLevel,
-      row.broker, row.policyholder, row.nationality, row.highRiskInd
+      row.policyNo, row.issueDateRaw, row.broker,
+      row.policyholder, row.policyholderNationality, row.policyholderHighRiskInd, formatRiskLevel(row.policyholderRiskLevel), row.policyholderComment, row.policyholderReason,
+      row.insured, row.insuredHighRiskInd, formatRiskLevel(row.insuredRiskLevel), row.insuredComment, row.insuredReason
     ]));
   });
 }
@@ -836,14 +851,26 @@ function sumActInvestigation() {
 }
 
 function getHrcRowClass(item) {
-  const hasTrust = item.comment.includes("Trust");
-  const hasG05 = item.reason.includes("G05");
-  const hasG07 = item.reason.includes("G07");
+  const comments = `${item.policyholderComment} ${item.insuredComment}`;
+  const reasons = `${item.policyholderReason} ${item.insuredReason}`;
+  const lowestRiskLevel = Math.min(item.policyholderRiskLevel, item.insuredRiskLevel);
+  const hasTrust = comments.includes("Trust");
+  const hasG05 = reasons.includes("G05");
+  const hasG07 = reasons.includes("G07");
   const isEverest = item.broker.includes("Everest");
-  if (isEverest && item.riskLevel > 2) return "row-red";
+  if (isEverest && lowestRiskLevel > 2) return "row-red";
   if (hasTrust && !hasG05) return "row-yellow";
   if (isEverest && !hasG07) return "row-green";
   return "";
+}
+
+function parseRiskLevel(value) {
+  const parsed = parseInt(value, 10);
+  return Number.isNaN(parsed) ? Number.POSITIVE_INFINITY : parsed;
+}
+
+function formatRiskLevel(value) {
+  return Number.isFinite(value) ? value : "";
 }
 
 function renderTable(targetId, headers, rows) {
@@ -992,6 +1019,10 @@ function parseLooseDate(dateStr) {
 function excelToArray(text) {
   if (!text.trim()) return [];
   return text.replace(/\r/g, "").replace(/\n$/, "").split("\n").map((row) => row.split("\t"));
+}
+
+function getCell(cols, index) {
+  return cols[index] || "";
 }
 
 function excelColToIndex(colName) {
